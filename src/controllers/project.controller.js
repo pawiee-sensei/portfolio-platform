@@ -83,3 +83,33 @@ exports.uploadImage = asyncHandler(async (req, res) => {
         imageUrl
     });
 });
+
+exports.addLink = asyncHandler(async (req, res) => {
+    const { label, url } = req.body;
+
+    await ProjectService.addProjectLink(req.params.id, label, url);
+
+    res.json({ success: true });
+});
+
+exports.getLinks = asyncHandler(async (req, res) => {
+    const links = await ProjectService.getProjectLinks(req.params.id);
+
+    res.json({ success: true, data: links });
+});
+
+exports.uploadFile = asyncHandler(async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+
+    await ProjectService.addProjectFile(
+        req.params.id,
+        fileUrl,
+        req.file.originalname
+    );
+
+    res.json({ success: true, fileUrl });
+});

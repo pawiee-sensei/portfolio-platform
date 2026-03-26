@@ -9,6 +9,28 @@ class ProjectService {
         );
     }
 
+    static async addProjectLink(projectId, label, url) {
+        await pool.query(
+            `INSERT INTO project_links (project_id, label, url) VALUES (?, ?, ?)`,
+            [projectId, label, url]
+        );
+    }
+
+    static async getProjectLinks(projectId) {
+        const [rows] = await pool.query(
+            `SELECT * FROM project_links WHERE project_id = ?`,
+            [projectId]
+        );
+        return rows;
+    }
+
+    static async addProjectFile(projectId, fileUrl, fileName) {
+        await pool.query(
+            `INSERT INTO project_files (project_id, file_url, file_name) VALUES (?, ?, ?)`,
+            [projectId, fileUrl, fileName]
+        );
+    }
+
     static async setProjectTechnologies(projectId, techIds) {
     // Remove old
     await pool.query(
