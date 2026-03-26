@@ -2,6 +2,8 @@ const loginForm = document.getElementById('loginForm');
 const signupForm = document.getElementById('signupForm');
 const errorEl = document.getElementById('error');
 const successEl = document.getElementById('success');
+const tabs = document.querySelectorAll('.auth-tab');
+const panels = document.querySelectorAll('.auth-panel');
 
 const clearMessages = () => {
   if (errorEl) {
@@ -12,6 +14,24 @@ const clearMessages = () => {
     successEl.innerText = '';
   }
 };
+
+const setActivePanel = (targetId) => {
+  tabs.forEach((tab) => {
+    const isActive = tab.dataset.target === targetId;
+    tab.classList.toggle('active', isActive);
+  });
+
+  panels.forEach((panel) => {
+    panel.classList.toggle('active', panel.id === targetId);
+  });
+};
+
+tabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    clearMessages();
+    setActivePanel(tab.dataset.target);
+  });
+});
 
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
@@ -38,6 +58,7 @@ if (loginForm) {
       }
 
       localStorage.setItem('token', data.token);
+      successEl.innerText = 'Login successful';
       window.location.href = '/dashboard.html';
     } catch (err) {
       errorEl.innerText = 'Server error';

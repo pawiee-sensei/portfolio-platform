@@ -2,41 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css" />
 </head>
 <body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <p class="sidebar-kicker">Portfolio Platform</p>
+        <h1>Admin</h1>
+      </div>
 
-  <h2>Dashboard</h2>
-  <button id="getProjects">Get Projects</button>
-  <button id="logout">Logout</button>
+      <nav>
+        <ul class="nav-list">
+          <li class="nav-item active" data-page="projects">Projects</li>
+          <li class="nav-item" data-page="create">Add Project</li>
+          <li class="nav-item" data-page="contacts">Contacts</li>
+        </ul>
+      </nav>
+    </aside>
 
-  <pre id="output"></pre>
+    <div class="main">
+      <header class="header">
+        <div>
+          <p class="header-kicker">Control Center</p>
+          <span class="header-title">Dashboard</span>
+        </div>
+        <button id="logout" class="ghost-btn">Logout</button>
+      </header>
 
-  <script>
-    const token = localStorage.getItem('token');
+      <section class="content" id="content">
+        <div class="panel-head">
+          <h2>Projects Overview</h2>
+          <button id="getProjects" class="primary-btn">Load Projects</button>
+        </div>
 
-    if (!token) {
-      window.location.href = '/login.html';
-    }
+        <p class="panel-copy">
+          Review your latest portfolio data, refresh the project list, and prepare the next admin tools from here.
+        </p>
 
-    document.getElementById('getProjects').onclick = async () => {
-      const res = await fetch('/api/projects', {
-        headers: {
-          Authorization: 'Bearer ' + token
-        }
-      });
+        <pre id="output" class="output-card">Select "Load Projects" to fetch data.</pre>
+      </section>
+    </div>
+  </div>
 
-      const data = await res.json();
-
-      document.getElementById('output').innerText =
-        JSON.stringify(data, null, 2);
-    };
-
-    document.getElementById('logout').onclick = () => {
-      localStorage.removeItem('token');
-      window.location.href = '/login.html';
-    };
-  </script>
-
+  <script src="/js/dashboard.js"></script>
 </body>
 </html>

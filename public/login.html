@@ -2,33 +2,63 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Access</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/auth.css" />
 </head>
 <body>
+  <main class="auth-shell">
+    <section class="auth-hero">
+      <p class="eyebrow">Portfolio Platform</p>
+      <h1>Manage your work with a sharper admin space.</h1>
+      <p class="hero-copy">
+        Switch between login and sign up without leaving the page, then head straight into your dashboard.
+      </p>
+    </section>
 
-  <h2>Login</h2>
+    <section class="auth-card">
+      <div class="auth-tabs" role="tablist" aria-label="Authentication views">
+        <button type="button" class="auth-tab active" data-target="login-panel">Login</button>
+        <button type="button" class="auth-tab" data-target="signup-panel">Sign Up</button>
+      </div>
 
-  <form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required />
-    <br /><br />
-    <input type="password" id="password" placeholder="Password" required />
-    <br /><br />
-    <button type="submit">Login</button>
-  </form>
+      <div class="auth-panel active" id="login-panel">
+        <h2>Welcome back</h2>
+        <p class="panel-copy">Sign in to edit projects, upload assets, and manage your portfolio.</p>
 
-  <h2>Sign Up</h2>
+        <form id="loginForm" class="auth-form">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="admin@email.com" required />
 
-  <form id="signupForm">
-    <input type="email" id="signupEmail" placeholder="Email" required />
-    <br /><br />
-    <input type="password" id="signupPassword" placeholder="Password" required />
-    <br /><br />
-    <button type="submit">Sign Up</button>
-  </form>
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password" required />
 
-  <p id="error" style="color:red;"></p>
-  <p id="success" style="color:green;"></p>
+          <button type="submit" class="primary-btn">Login</button>
+        </form>
+      </div>
 
+      <div class="auth-panel" id="signup-panel">
+        <h2>Create an account</h2>
+        <p class="panel-copy">Register a new admin account and store your password securely with hashing.</p>
+
+        <form id="signupForm" class="auth-form">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" required />
+
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" placeholder="Create a strong password" required />
+
+          <button type="submit" class="primary-btn">Sign Up</button>
+        </form>
+      </div>
+
+      <p id="error" class="message error-message"></p>
+      <p id="success" class="message success-message"></p>
+    </section>
+  </main>
   <script src="/js/auth.js"></script>
 </body>
 </html>
