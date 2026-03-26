@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard</title>
+</head>
+<body>
+
+  <h2>Dashboard</h2>
+  <button id="getProjects">Get Projects</button>
+  <button id="logout">Logout</button>
+
+  <pre id="output"></pre>
+
+  <script>
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      window.location.href = '/login.html';
+    }
+
+    document.getElementById('getProjects').onclick = async () => {
+      const res = await fetch('/api/projects', {
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
+      });
+
+      const data = await res.json();
+
+      document.getElementById('output').innerText =
+        JSON.stringify(data, null, 2);
+    };
+
+    document.getElementById('logout').onclick = () => {
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    };
+  </script>
+
+</body>
+</html>
