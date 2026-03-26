@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const projectRoutes = require('./routes/project.routes');
+const technologyRoutes = require('./routes/technology.routes');
 const errorMiddleware = require('./middlewares/error.middleware');
 const authRoutes = require('./routes/auth.routes'); 
 
@@ -13,6 +14,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/projects', projectRoutes);
+app.use('/api/technologies', technologyRoutes);
 app.use('/api/auth', authRoutes);
 
 // Health check

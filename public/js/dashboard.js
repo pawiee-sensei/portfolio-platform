@@ -11,11 +11,13 @@ document.getElementById('logout').onclick = () => {
 
 document.querySelectorAll('.sidebar li').forEach((item) => {
   item.addEventListener('click', () => {
+    const href = item.getAttribute('data-href');
     const page = item.getAttribute('data-page');
 
-    document.querySelectorAll('.sidebar li').forEach((navItem) => {
-      navItem.classList.toggle('active', navItem === item);
-    });
+    if (href) {
+      window.location.href = href;
+      return;
+    }
 
     loadPage(page);
   });
@@ -23,6 +25,9 @@ document.querySelectorAll('.sidebar li').forEach((item) => {
 
 async function loadPage(page) {
   const content = document.getElementById('content');
+
+  setActiveNav(page);
+  window.location.hash = page;
 
   if (page === 'projects') {
     try {
@@ -57,57 +62,6 @@ async function loadPage(page) {
     }
   }
 
-  if (page === 'create') {
-    content.innerHTML = `
-      <div class="panel-head">
-        <h2>Add Project</h2>
-      </div>
-      <p class="panel-copy">Create a new portfolio project with the minimum required fields.</p>
-      <form id="createForm" class="dashboard-form">
-        <label for="title">Title</label>
-        <input id="title" placeholder="Project title" required />
-
-        <label for="slug">Slug</label>
-        <input id="slug" placeholder="project-slug" required />
-
-        <button type="submit" class="primary-btn">Create</button>
-      </form>
-      <p id="formMessage" class="panel-copy"></p>
-    `;
-
-    document.getElementById('createForm').onsubmit = async (e) => {
-      e.preventDefault();
-
-      const formMessage = document.getElementById('formMessage');
-      formMessage.textContent = 'Creating project...';
-
-      try {
-        const res = await fetch('/api/projects', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + token
-          },
-          body: JSON.stringify({
-            title: document.getElementById('title').value,
-            slug: document.getElementById('slug').value
-          })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok || !data.success) {
-          formMessage.textContent = data.message || 'Failed to create project';
-          return;
-        }
-
-        formMessage.textContent = 'Project created successfully';
-      } catch (error) {
-        formMessage.textContent = 'Server error';
-      }
-    };
-  }
-
   if (page === 'contacts') {
     content.innerHTML = `
       <div class="panel-head">
@@ -117,6 +71,12 @@ async function loadPage(page) {
       <pre class="output-card">Contacts module is not connected yet.</pre>
     `;
   }
+}
+
+function setActiveNav(page) {
+  document.querySelectorAll('.sidebar li').forEach((item) => {
+    item.classList.toggle('active', item.getAttribute('data-page') === page);
+  });
 }
 
 window.openProject = async (id) => {
@@ -155,20 +115,51 @@ window.addLink = async (id) => {
 };
 
 window.uploadFile = async (id) => {
-  const file = document.getElementById('fileInput').files[0];
+  const input = document.getElementById('fileInput');
+  const file = input.files[0];
+
+  if (!file) {
+    alert('Please select a file first');
+    return;
+  }
+
+  const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
+  const maxSize = 2 * 1024 * 1024;
+
+  if (!allowedTypes.includes(file.type)) {
+    alert('Invalid file type');
+    return;
+  }
+
+  if (file.size > maxSize) {
+    alert('File too large (max 2MB)');
+    return;
+  }
 
   const formData = new FormData();
   formData.append('file', file);
 
-  await fetch(`/api/projects/${id}/files`, {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + token
-    },
-    body: formData
-  });
+  try {
+    const res = await fetch(`/api/projects/${id}/files`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + token
+      },
+      body: formData
+    });
 
-  alert('File uploaded');
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Upload failed');
+    }
+
+    alert('File uploaded');
+    input.value = '';
+  } catch (err) {
+    alert(err.message);
+  }
 };
 
-loadPage('projects');
+const initialPage = window.location.hash.replace('#', '') || 'projects';
+loadPage(initialPage === 'contacts' ? 'contacts' : 'projects');

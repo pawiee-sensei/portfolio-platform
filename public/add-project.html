@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dashboard.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <p class="sidebar-kicker">Portfolio Platform</p>
+        <h1>Admin</h1>
+      </div>
+
+      <nav>
+        <ul class="nav-list">
+          <li class="nav-item" data-href="/dashboard.html">Projects</li>
+          <li class="nav-item active">Add Project</li>
+          <li class="nav-item" data-href="/dashboard.html#contacts">Contacts</li>
+        </ul>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="header">
+        <div>
+          <p class="header-kicker">Control Center</p>
+          <span class="header-title">Add Project</span>
+        </div>
+        <button id="logout" class="ghost-btn">Logout</button>
+      </header>
+
+      <section class="content">
+        <div class="panel-head">
+          <h2>Add Project</h2>
+        </div>
+
+        <p class="panel-copy">Create a portfolio project with descriptions, secure links, featured status, and technology tags.</p>
+
+        <form id="projectForm" class="dashboard-form">
+          <label for="title">Title</label>
+          <input id="title" placeholder="Project title" required />
+
+          <label for="slug">Slug</label>
+          <input id="slug" placeholder="project-slug" required />
+
+          <label for="short_description">Short Description</label>
+          <textarea id="short_description" placeholder="Short summary for cards or preview sections"></textarea>
+
+          <label for="description">Full Description</label>
+          <textarea id="description" placeholder="Detailed explanation for the project page"></textarea>
+
+          <label for="github_url">Secured Link</label>
+          <input id="github_url" type="url" placeholder="https://github.com/your-project" />
+
+          <label for="live_url">Live URL</label>
+          <input id="live_url" type="url" placeholder="https://your-live-site.com" />
+
+          <label for="is_featured">Featured Project</label>
+          <label>
+            <input type="checkbox" id="is_featured" />
+            Show this project in featured sections
+          </label>
+
+          <div class="panel-head">
+            <h3>Technologies</h3>
+          </div>
+          <p class="panel-copy">Choose all technologies used in this project.</p>
+          <div id="techList" class="output-card">Loading technologies...</div>
+
+          <button type="submit" class="primary-btn">Create</button>
+        </form>
+
+        <p id="formMessage" class="panel-copy"></p>
+      </section>
+    </div>
+  </div>
+
+  <script src="/js/add-project.js"></script>
+</body>
+</html>
