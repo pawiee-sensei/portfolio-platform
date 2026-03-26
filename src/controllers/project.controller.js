@@ -52,3 +52,34 @@ exports.deleteProject = asyncHandler(async (req, res) => {
         message: 'Project deleted'
     });
 });
+
+exports.assignTechnologies = asyncHandler(async (req, res) => {
+    const { techIds } = req.body;
+
+    await ProjectService.setProjectTechnologies(req.params.id, techIds);
+
+    res.json({
+        success: true,
+        message: 'Technologies updated'
+    });
+});
+
+exports.uploadImage = asyncHandler(async (req, res) => {
+    const projectId = req.params.id;
+
+    if (!req.file) {
+        return res.status(400).json({
+            success: false,
+            message: 'No image file uploaded'
+        });
+    }
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+
+    await ProjectService.addProjectImage(projectId, imageUrl);
+
+    res.json({
+        success: true,
+        imageUrl
+    });
+});

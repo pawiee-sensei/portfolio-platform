@@ -2,6 +2,31 @@ const pool = require('../config/db');
 
 class ProjectService {
 
+    static async addProjectImage(projectId, imageUrl) {
+        await pool.query(
+            `INSERT INTO project_images (project_id, image_url) VALUES (?, ?)`,
+            [projectId, imageUrl]
+        );
+    }
+
+    static async setProjectTechnologies(projectId, techIds) {
+    // Remove old
+    await pool.query(
+        `DELETE FROM project_technologies WHERE project_id = ?`,
+        [projectId]
+    );
+
+    // Insert new
+    const values = techIds.map(id => [projectId, id]);
+
+    if (values.length > 0) {
+        await pool.query(
+            `INSERT INTO project_technologies (project_id, technology_id) VALUES ?`,
+            [values]
+        );
+    }
+}
+
     static async getAllProjects() {
         const [rows] = await pool.query(`
             SELECT * FROM projects ORDER BY created_at DESC
@@ -68,4 +93,7 @@ class ProjectService {
     }
 }
 
+
+
 module.exports = ProjectService;
+
