@@ -35,6 +35,27 @@ function isValidUrl(value) {
     }
 }
 
+function validateLinksPayload(payload) {
+    if (!Array.isArray(payload)) {
+        throw createValidationError('Links payload must be an array.');
+    }
+
+    return payload.map((item) => {
+        const label = normalizeText(item.label, 255);
+        const url = normalizeText(item.url, 500);
+
+        if (!label || !url) {
+            throw createValidationError('Each link must include a label and a URL.');
+        }
+
+        if (!isValidUrl(url)) {
+            throw createValidationError('Each link URL must be a valid http/https URL.');
+        }
+
+        return { label, url };
+    });
+}
+
 function normalizeText(value, maxLength = null) {
     if (value === undefined || value === null) {
         return null;
@@ -292,6 +313,17 @@ exports.addLink = asyncHandler(async (req, res) => {
     res.json({ success: true });
 });
 
+exports.updateLinks = asyncHandler(async (req, res) => {
+    const links = validateLinksPayload(req.body.links);
+
+    await ProjectService.replaceProjectLinks(req.params.id, links);
+
+    res.json({
+        success: true,
+        message: 'Links updated'
+    });
+});
+
 exports.getLinks = asyncHandler(async (req, res) => {
     const links = await ProjectService.getProjectLinks(req.params.id);
 
@@ -312,4 +344,22 @@ exports.uploadFile = asyncHandler(async (req, res) => {
     );
 
     res.json({ success: true, fileUrl });
+});
+
+exports.deleteImage = asyncHandler(async (req, res) => {
+    await ProjectService.deleteProjectImage(req.params.id, req.params.imageId);
+
+    res.json({
+        success: true,
+        message: 'Image removed'
+    });
+});
+
+exports.deleteFile = asyncHandler(async (req, res) => {
+    await ProjectService.deleteProjectFile(req.params.id, req.params.fileId);
+
+    res.json({
+        success: true,
+        message: 'File removed'
+    });
 });

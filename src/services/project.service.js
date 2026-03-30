@@ -26,6 +26,24 @@ class ProjectService {
         );
     }
 
+    static async replaceProjectLinks(projectId, links) {
+        await pool.query(
+            `DELETE FROM project_links WHERE project_id = ?`,
+            [projectId]
+        );
+
+        if (!links.length) {
+            return;
+        }
+
+        const values = links.map((link) => [projectId, link.label, link.url]);
+
+        await pool.query(
+            `INSERT INTO project_links (project_id, label, url) VALUES ?`,
+            [values]
+        );
+    }
+
     static async getProjectLinks(projectId) {
         const [rows] = await pool.query(
             `SELECT * FROM project_links WHERE project_id = ?`,
@@ -42,6 +60,13 @@ class ProjectService {
         return rows;
     }
 
+    static async deleteProjectImage(projectId, imageId) {
+        await pool.query(
+            `DELETE FROM project_images WHERE id = ? AND project_id = ?`,
+            [imageId, projectId]
+        );
+    }
+
     static async addProjectFile(projectId, fileUrl, fileName) {
         await pool.query(
             `INSERT INTO project_files (project_id, file_url, file_name) VALUES (?, ?, ?)`,
@@ -55,6 +80,13 @@ class ProjectService {
             [projectId]
         );
         return rows;
+    }
+
+    static async deleteProjectFile(projectId, fileId) {
+        await pool.query(
+            `DELETE FROM project_files WHERE id = ? AND project_id = ?`,
+            [fileId, projectId]
+        );
     }
 
     static async setProjectTechnologies(projectId, techIds) {

@@ -282,15 +282,25 @@ function renderGalleryPreview(files) {
     : `${files.length} files selected`;
   galleryPreviewUrls = files.map((file) => URL.createObjectURL(file));
   galleryPreview.className = 'media-preview media-preview-grid';
-  galleryPreview.innerHTML = galleryPreviewUrls.map((url, index) => `
-    <div class="gallery-preview-item">
-      <div class="media-preview-frame" data-label="Frame ${index + 1}">
-        <button type="button" class="media-remove-btn" data-gallery-index="${index}" aria-label="Remove gallery image ${index + 1}">x</button>
-        <img src="${url}" alt="Gallery preview ${index + 1}" class="media-preview-image" />
+  galleryPreview.innerHTML = `
+    <div class="gallery-preview-strip">
+      <button type="button" class="gallery-scroll-btn gallery-scroll-btn-prev" data-gallery-scroll="-1" aria-label="Scroll gallery left"><</button>
+      <div class="gallery-preview-track" id="galleryPreviewTrack">
+        ${galleryPreviewUrls.map((url, index) => `
+          <div class="gallery-preview-item">
+            <div class="media-preview-frame" data-label="Frame ${index + 1}">
+              <button type="button" class="media-remove-btn" data-gallery-index="${index}" aria-label="Remove gallery image ${index + 1}">x</button>
+              <img src="${url}" alt="Gallery preview ${index + 1}" class="media-preview-image" />
+            </div>
+            <span>${files[index].name}</span>
+          </div>
+        `).join('')}
       </div>
-      <span>${files[index].name}</span>
+      <button type="button" class="gallery-scroll-btn gallery-scroll-btn-next" data-gallery-scroll="1" aria-label="Scroll gallery right">></button>
     </div>
-  `).join('');
+  `;
+
+  updateGalleryScrollButtons();
 }
 
 function getOversizedFiles(files) {
@@ -490,6 +500,19 @@ thumbnailPreview.addEventListener('click', (event) => {
 });
 galleryPreview.addEventListener('click', (event) => {
   const removeButton = event.target.closest('[data-gallery-index]');
+  const scrollButton = event.target.closest('[data-gallery-scroll]');
+
+  if (scrollButton) {
+    const track = document.getElementById('galleryPreviewTrack');
+
+    if (track) {
+      track.scrollBy({
+        left: Number(scrollButton.dataset.galleryScroll) * 240,
+        behavior: 'smooth'
+      });
+    }
+    return;
+  }
 
   if (!removeButton) {
     return;
@@ -497,6 +520,28 @@ galleryPreview.addEventListener('click', (event) => {
 
   removeGallerySelection(Number(removeButton.dataset.galleryIndex));
 });
+
+galleryPreview.addEventListener('scroll', () => {
+  updateGalleryScrollButtons();
+}, true);
+
+function updateGalleryScrollButtons() {
+  const track = document.getElementById('galleryPreviewTrack');
+  const prevButton = galleryPreview.querySelector('.gallery-scroll-btn-prev');
+  const nextButton = galleryPreview.querySelector('.gallery-scroll-btn-next');
+
+  if (!track || !prevButton || !nextButton) {
+    return;
+  }
+
+  const maxScrollLeft = track.scrollWidth - track.clientWidth;
+  const hasOverflow = maxScrollLeft > 4;
+
+  prevButton.classList.toggle('is-hidden', !hasOverflow);
+  nextButton.classList.toggle('is-hidden', !hasOverflow);
+  prevButton.disabled = track.scrollLeft <= 4;
+  nextButton.disabled = track.scrollLeft >= maxScrollLeft - 4;
+}
 
 form.onsubmit = async (e) => {
   e.preventDefault();
