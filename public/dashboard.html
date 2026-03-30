@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard</title>
+  <title>Portfolio Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/dashboard.css" />
+  <link rel="stylesheet" href="/css/portfolio.css" />
 </head>
 <body>
   <div class="layout">
@@ -19,8 +20,8 @@
 
       <nav>
         <ul class="nav-list">
-          <li class="nav-item active" data-page="projects">Projects</li>
-          <li class="nav-item" data-href="/add-project.html">Add Project</li>
+          <li class="nav-item active" data-page="projects">Portfolio</li>
+          <li class="nav-item" data-href="/add-project.html">Add Portfolio</li>
           <li class="nav-item" data-page="contacts">Contacts</li>
         </ul>
       </nav>
@@ -30,25 +31,26 @@
       <header class="header">
         <div>
           <p class="header-kicker">Control Center</p>
-          <span class="header-title">Dashboard</span>
+          <span class="header-title">Portfolio Dashboard</span>
         </div>
         <button id="logout" class="ghost-btn">Logout</button>
       </header>
 
       <section class="content" id="content">
         <div class="panel-head">
-          <h2>Projects Overview</h2>
+          <h2>Portfolio Overview</h2>
         </div>
 
         <p class="panel-copy">
-          Review your latest portfolio data and manage each project from this page.
+          Review your latest portfolio entries, open their galleries, and edit each one from this page.
         </p>
 
-        <pre id="output" class="output-card">Loading projects...</pre>
+        <pre id="output" class="output-card">Loading portfolio...</pre>
       </section>
     </div>
   </div>
 
+  <script src="/js/portfolio.js"></script>
   <script src="/js/dashboard.js"></script>
 </body>
 </html>

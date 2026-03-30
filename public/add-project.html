@@ -132,13 +132,39 @@
             <div class="form-grid form-grid-two">
               <div class="field-group">
                 <label for="thumbnail">Thumbnail</label>
-                <input type="file" id="thumbnail" accept="image/*" />
+                <div class="media-upload-card">
+                  <input type="file" id="thumbnail" class="media-file-input" accept="image/*" />
+                  <label for="thumbnail" class="media-file-trigger">
+                    <span class="media-file-btn">Choose File</span>
+                    <span id="thumbnailMeta" class="media-file-meta">No file chosen</span>
+                  </label>
+                  <div id="thumbnailPreview" class="media-preview media-preview-single is-empty">
+                    <div class="media-preview-empty">
+                      <span class="media-preview-kicker">Cover Preview</span>
+                      <strong>No thumbnail selected yet</strong>
+                      <p>Choose one strong image for the project card, featured section, or hero banner.</p>
+                    </div>
+                  </div>
+                </div>
                 <p class="field-help">Best for the main project card or featured banner.</p>
               </div>
 
               <div class="field-group">
                 <label for="gallery_images">Gallery Images</label>
-                <input type="file" id="gallery_images" accept="image/*" multiple />
+                <div class="media-upload-card">
+                  <input type="file" id="gallery_images" class="media-file-input" accept="image/*" multiple />
+                  <label for="gallery_images" class="media-file-trigger">
+                    <span class="media-file-btn">Choose Files</span>
+                    <span id="galleryMeta" class="media-file-meta">No files chosen</span>
+                  </label>
+                  <div id="galleryPreview" class="media-preview media-preview-grid is-empty">
+                    <div class="media-preview-empty">
+                      <span class="media-preview-kicker">Gallery Preview</span>
+                      <strong>Your supporting images will appear here</strong>
+                      <p>Add multiple images to show process shots, alternate views, layouts, or final outputs.</p>
+                    </div>
+                  </div>
+                </div>
                 <p class="field-help">Upload multiple supporting images alongside the main project.</p>
               </div>
             </div>

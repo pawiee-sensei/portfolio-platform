@@ -199,9 +199,22 @@ exports.getProject = asyncHandler(async (req, res) => {
         throw error;
     }
 
+    const [images, links, files, technologies] = await Promise.all([
+        ProjectService.getProjectImages(req.params.id),
+        ProjectService.getProjectLinks(req.params.id),
+        ProjectService.getProjectFiles(req.params.id),
+        ProjectService.getProjectTechnologies(req.params.id)
+    ]);
+
     res.json({
         success: true,
-        data: project
+        data: {
+            ...project,
+            images,
+            links,
+            files,
+            technologies
+        }
     });
 });
 

@@ -1,5 +1,6 @@
 const LOGIN_PATH = '/login.html';
 const DASHBOARD_PATH = '/dashboard.html';
+const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
 const MESSAGES = {
   titleRequired: 'Title is required.',
   slugInvalid: 'Please enter a clearer title using letters or numbers.',
@@ -27,6 +28,10 @@ const githubInput = document.getElementById('github_url');
 const liveInput = document.getElementById('live_url');
 const thumbnailInput = document.getElementById('thumbnail');
 const galleryInput = document.getElementById('gallery_images');
+const thumbnailMeta = document.getElementById('thumbnailMeta');
+const galleryMeta = document.getElementById('galleryMeta');
+const thumbnailPreview = document.getElementById('thumbnailPreview');
+const galleryPreview = document.getElementById('galleryPreview');
 const yearInput = document.getElementById('project_year');
 const clientInput = document.getElementById('client_name');
 const mediumInput = document.getElementById('medium');
@@ -36,6 +41,8 @@ const descriptionInput = document.getElementById('description');
 const featuredInput = document.getElementById('is_featured');
 const logoutButton = document.getElementById('logout');
 let isTechLoading = false;
+let thumbnailPreviewUrl = null;
+let galleryPreviewUrls = [];
 
 const categoryContent = {
   web: {
@@ -172,6 +179,20 @@ function setFormMessage(message) {
   formMessage.textContent = message;
 }
 
+function formatFileSize(bytes) {
+  return `${(bytes / (1024 * 1024)).toFixed(0)}MB`;
+}
+
+function revokeMediaPreviewUrls() {
+  if (thumbnailPreviewUrl) {
+    URL.revokeObjectURL(thumbnailPreviewUrl);
+    thumbnailPreviewUrl = null;
+  }
+
+  galleryPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  galleryPreviewUrls = [];
+}
+
 function getAuthHeaders(extraHeaders = {}) {
   const currentToken = localStorage.getItem('token');
 
@@ -199,6 +220,114 @@ function updateCategoryUI() {
   githubInput.placeholder = config.githubPlaceholder;
   liveInput.placeholder = config.livePlaceholder;
   technologySection.classList.toggle('is-hidden', !config.showTech);
+}
+
+function renderEmptyThumbnailPreview() {
+  thumbnailMeta.textContent = 'No file chosen';
+  thumbnailPreview.className = 'media-preview media-preview-single is-empty';
+  thumbnailPreview.innerHTML = `
+    <div class="media-preview-empty">
+      <span class="media-preview-kicker">Cover Preview</span>
+      <strong>No thumbnail selected yet</strong>
+      <p>Choose one strong image for the project card, featured section, or hero banner.</p>
+    </div>
+  `;
+}
+
+function renderEmptyGalleryPreview() {
+  galleryMeta.textContent = 'No files chosen';
+  galleryPreview.className = 'media-preview media-preview-grid is-empty';
+  galleryPreview.innerHTML = `
+    <div class="media-preview-empty">
+      <span class="media-preview-kicker">Gallery Preview</span>
+      <strong>Your supporting images will appear here</strong>
+      <p>Add multiple images to show process shots, alternate views, layouts, or final outputs.</p>
+    </div>
+  `;
+}
+
+function renderThumbnailPreview(file) {
+  if (thumbnailPreviewUrl) {
+    URL.revokeObjectURL(thumbnailPreviewUrl);
+  }
+
+  if (!file) {
+    thumbnailPreviewUrl = null;
+    renderEmptyThumbnailPreview();
+    return;
+  }
+
+  thumbnailMeta.textContent = file.name;
+  thumbnailPreviewUrl = URL.createObjectURL(file);
+  thumbnailPreview.className = 'media-preview media-preview-single';
+  thumbnailPreview.innerHTML = `
+    <div class="media-preview-frame" data-label="Thumbnail Ready">
+      <button type="button" class="media-remove-btn" data-remove-thumbnail aria-label="Remove thumbnail">x</button>
+      <img src="${thumbnailPreviewUrl}" alt="Thumbnail preview" class="media-preview-image" />
+    </div>
+  `;
+}
+
+function renderGalleryPreview(files) {
+  galleryPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+  galleryPreviewUrls = [];
+
+  if (!files.length) {
+    renderEmptyGalleryPreview();
+    return;
+  }
+
+  galleryMeta.textContent = files.length === 1
+    ? files[0].name
+    : `${files.length} files selected`;
+  galleryPreviewUrls = files.map((file) => URL.createObjectURL(file));
+  galleryPreview.className = 'media-preview media-preview-grid';
+  galleryPreview.innerHTML = galleryPreviewUrls.map((url, index) => `
+    <div class="gallery-preview-item">
+      <div class="media-preview-frame" data-label="Frame ${index + 1}">
+        <button type="button" class="media-remove-btn" data-gallery-index="${index}" aria-label="Remove gallery image ${index + 1}">x</button>
+        <img src="${url}" alt="Gallery preview ${index + 1}" class="media-preview-image" />
+      </div>
+      <span>${files[index].name}</span>
+    </div>
+  `).join('');
+}
+
+function getOversizedFiles(files) {
+  return files.filter((file) => file.size > MAX_IMAGE_SIZE_BYTES);
+}
+
+function validateImageFiles(files, fieldLabel) {
+  const oversizedFiles = getOversizedFiles(files);
+
+  if (!oversizedFiles.length) {
+    return true;
+  }
+
+  const fileNames = oversizedFiles.map((file) => file.name).join(', ');
+  setFormMessage(`${fieldLabel} must be ${formatFileSize(MAX_IMAGE_SIZE_BYTES)} or smaller. Oversized file(s): ${fileNames}`);
+  return false;
+}
+
+function removeThumbnailSelection() {
+  revokeMediaPreviewUrls();
+  thumbnailInput.value = '';
+  renderEmptyThumbnailPreview();
+  renderGalleryPreview(Array.from(galleryInput.files));
+}
+
+function removeGallerySelection(indexToRemove) {
+  const dataTransfer = new DataTransfer();
+  const files = Array.from(galleryInput.files);
+
+  files.forEach((file, index) => {
+    if (index !== indexToRemove) {
+      dataTransfer.items.add(file);
+    }
+  });
+
+  galleryInput.files = dataTransfer.files;
+  renderGalleryPreview(Array.from(galleryInput.files));
 }
 
 function buildProjectData(formValues) {
@@ -324,11 +453,50 @@ async function loadTechnologies() {
 }
 
 function resetFormState() {
+  revokeMediaPreviewUrls();
   form.reset();
   updateCategoryUI();
+  renderEmptyThumbnailPreview();
+  renderEmptyGalleryPreview();
 }
 
 categoryInput.addEventListener('change', updateCategoryUI);
+thumbnailInput.addEventListener('change', () => {
+  const selectedFile = thumbnailInput.files[0] || null;
+
+  if (selectedFile && !validateImageFiles([selectedFile], 'Thumbnail')) {
+    thumbnailInput.value = '';
+    renderEmptyThumbnailPreview();
+    return;
+  }
+
+  renderThumbnailPreview(selectedFile);
+});
+galleryInput.addEventListener('change', () => {
+  const selectedFiles = Array.from(galleryInput.files);
+
+  if (!validateImageFiles(selectedFiles, 'Gallery images')) {
+    galleryInput.value = '';
+    renderEmptyGalleryPreview();
+    return;
+  }
+
+  renderGalleryPreview(selectedFiles);
+});
+thumbnailPreview.addEventListener('click', (event) => {
+  if (event.target.closest('[data-remove-thumbnail]')) {
+    removeThumbnailSelection();
+  }
+});
+galleryPreview.addEventListener('click', (event) => {
+  const removeButton = event.target.closest('[data-gallery-index]');
+
+  if (!removeButton) {
+    return;
+  }
+
+  removeGallerySelection(Number(removeButton.dataset.galleryIndex));
+});
 
 form.onsubmit = async (e) => {
   e.preventDefault();
@@ -367,6 +535,14 @@ form.onsubmit = async (e) => {
     return;
   }
 
+  if (formValues.thumbnailFile && !validateImageFiles([formValues.thumbnailFile], 'Thumbnail')) {
+    return;
+  }
+
+  if (!validateImageFiles(formValues.galleryFiles, 'Gallery images')) {
+    return;
+  }
+
   setSubmitting(true);
   setFormMessage(
     formValues.thumbnailFile || formValues.galleryFiles.length
@@ -398,6 +574,8 @@ form.onsubmit = async (e) => {
 
 async function initPage() {
   updateCategoryUI();
+  renderEmptyThumbnailPreview();
+  renderEmptyGalleryPreview();
   await loadTechnologies();
 }
 

@@ -34,6 +34,14 @@ class ProjectService {
         return rows;
     }
 
+    static async getProjectImages(projectId) {
+        const [rows] = await pool.query(
+            `SELECT * FROM project_images WHERE project_id = ? ORDER BY created_at ASC`,
+            [projectId]
+        );
+        return rows;
+    }
+
     static async addProjectFile(projectId, fileUrl, fileName) {
         await pool.query(
             `INSERT INTO project_files (project_id, file_url, file_name) VALUES (?, ?, ?)`,
@@ -41,23 +49,29 @@ class ProjectService {
         );
     }
 
-    static async setProjectTechnologies(projectId, techIds) {
-    // Remove old
-    await pool.query(
-        `DELETE FROM project_technologies WHERE project_id = ?`,
-        [projectId]
-    );
-
-    // Insert new
-    const values = techIds.map(id => [projectId, id]);
-
-    if (values.length > 0) {
-        await pool.query(
-            `INSERT INTO project_technologies (project_id, technology_id) VALUES ?`,
-            [values]
+    static async getProjectFiles(projectId) {
+        const [rows] = await pool.query(
+            `SELECT * FROM project_files WHERE project_id = ? ORDER BY created_at DESC`,
+            [projectId]
         );
+        return rows;
     }
-}
+
+    static async setProjectTechnologies(projectId, techIds) {
+        await pool.query(
+            `DELETE FROM project_technologies WHERE project_id = ?`,
+            [projectId]
+        );
+
+        const values = techIds.map((id) => [projectId, id]);
+
+        if (values.length > 0) {
+            await pool.query(
+                `INSERT INTO project_technologies (project_id, technology_id) VALUES ?`,
+                [values]
+            );
+        }
+    }
 
     static async getAllProjects() {
         const [rows] = await pool.query(`
@@ -73,6 +87,19 @@ class ProjectService {
         );
 
         return rows[0];
+    }
+
+    static async getProjectTechnologies(projectId) {
+        const [rows] = await pool.query(
+            `SELECT t.id, t.name
+             FROM project_technologies pt
+             INNER JOIN technologies t ON t.id = pt.technology_id
+             WHERE pt.project_id = ?
+             ORDER BY t.name ASC`,
+            [projectId]
+        );
+
+        return rows;
     }
 
     static async createProject(data) {
@@ -149,8 +176,6 @@ class ProjectService {
         await pool.query(`DELETE FROM projects WHERE id = ?`, [id]);
     }
 }
-
-
 
 module.exports = ProjectService;
 
