@@ -35,48 +35,167 @@
         <button id="logout" class="ghost-btn">Logout</button>
       </header>
 
-      <section class="content">
-        <div class="panel-head">
-          <h2>Add Project</h2>
+      <section class="content add-project-content">
+        <div class="add-project-hero">
+          <div>
+            <p class="header-kicker">Publishing Flow</p>
+            <h2>Add Work Across Your Whole Portfolio</h2>
+            <p class="panel-copy">Create entries for websites, apps, posters, pubmats, art, photography, poetry, branding, and everything in between from one cleaner publishing form.</p>
+          </div>
+          <div class="add-project-note">
+            <span class="add-project-note-label">Better flow</span>
+            <strong>Core details, media, links, and optional tech in one place</strong>
+            <p>Use category to shape the form: technical work can include stack details, while visual and literary work can stay media-first.</p>
+          </div>
         </div>
 
-        <p class="panel-copy">Create a portfolio project with descriptions, secure links, featured status, and technology tags.</p>
+        <form id="projectForm" class="dashboard-form project-builder-form">
+          <div class="form-section">
+            <div class="form-section-heading">
+              <p class="header-kicker">Basics</p>
+              <h3>Project Identity</h3>
+            </div>
+            <p class="section-support">Start with the essentials that define how this work will appear across your portfolio.</p>
 
-        <form id="projectForm" class="dashboard-form">
-          <label for="title">Title</label>
-          <input id="title" placeholder="Project title" required />
+            <div class="form-grid form-grid-two">
+              <div class="field-group">
+                <label for="title">Title</label>
+                <input id="title" placeholder="Editorial Poster Series" required />
+              </div>
 
-          <label for="slug">Slug</label>
-          <input id="slug" placeholder="project-slug" required />
+              <div class="field-group">
+                <label for="project_year">Project Year</label>
+                <input id="project_year" inputmode="numeric" maxlength="4" placeholder="Year (2025)" />
+              </div>
+            </div>
 
-          <label for="short_description">Short Description</label>
-          <textarea id="short_description" placeholder="Short summary for cards or preview sections"></textarea>
+            <div class="form-grid form-grid-two">
+              <div class="field-group">
+                <label for="category">Category</label>
+                <select id="category">
+                  <option value="web">Web</option>
+                  <option value="app">App</option>
+                  <option value="graphic-design">Graphic Design</option>
+                  <option value="poster">Poster</option>
+                  <option value="pubmat">Pubmat</option>
+                  <option value="art">Art</option>
+                  <option value="poetry">Poetry</option>
+                  <option value="photography">Photography</option>
+                  <option value="branding">Branding</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
 
-          <label for="description">Full Description</label>
-          <textarea id="description" placeholder="Detailed explanation for the project page"></textarea>
+              <div class="field-group">
+                <label for="status">Status</label>
+                <select id="status">
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
 
-          <label for="github_url">Secured Link</label>
-          <input id="github_url" type="url" placeholder="https://github.com/your-project" />
+            <p id="categoryHelp" class="field-help basics-help">Web and app projects can include technologies and links. Visual and literary work can stay focused on story and media.</p>
 
-          <label for="live_url">Live URL</label>
-          <input id="live_url" type="url" placeholder="https://your-live-site.com" />
+            <div class="form-grid form-grid-two">
+              <div class="field-group">
+                <label for="client_name">Client</label>
+                <input id="client_name" placeholder="Client (optional)" />
+              </div>
 
-          <label for="is_featured">Featured Project</label>
-          <label>
-            <input type="checkbox" id="is_featured" />
-            Show this project in featured sections
-          </label>
+              <div class="field-group">
+                <label for="medium">Medium</label>
+                <input id="medium" placeholder="Medium (e.g. Digital Art)" />
+              </div>
+            </div>
 
-          <div class="panel-head">
-            <h3>Technologies</h3>
+            <div class="field-group">
+              <label for="is_featured">Visibility</label>
+              <label class="toggle-card" for="is_featured">
+                <div>
+                  <span class="toggle-card-title">Featured Project</span>
+                  <p>Highlight this project in curated or homepage sections.</p>
+                </div>
+                <input type="checkbox" id="is_featured" />
+              </label>
+            </div>
           </div>
-          <p class="panel-copy">Choose all technologies used in this project.</p>
-          <div id="techList" class="output-card">Loading technologies...</div>
 
-          <button type="submit" class="primary-btn">Create</button>
+          <div class="form-section">
+            <div class="form-section-heading">
+              <p class="header-kicker">Media</p>
+              <h3>Cover and Gallery</h3>
+            </div>
+            <p class="section-support">Add a thumbnail for the main card and optional gallery images for detail views.</p>
+
+            <div class="form-grid form-grid-two">
+              <div class="field-group">
+                <label for="thumbnail">Thumbnail</label>
+                <input type="file" id="thumbnail" accept="image/*" />
+                <p class="field-help">Best for the main project card or featured banner.</p>
+              </div>
+
+              <div class="field-group">
+                <label for="gallery_images">Gallery Images</label>
+                <input type="file" id="gallery_images" accept="image/*" multiple />
+                <p class="field-help">Upload multiple supporting images alongside the main project.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-heading">
+              <p class="header-kicker">Copy</p>
+              <h3>Descriptions</h3>
+            </div>
+            <p class="section-support">Keep the short description scannable, then use the full description for context, story, and creative process.</p>
+
+            <div class="field-group">
+              <label for="short_description">Short Description</label>
+              <textarea id="short_description" rows="4" placeholder="A compact summary for cards, featured sections, and quick previews."></textarea>
+            </div>
+
+            <div class="field-group">
+              <label for="description">Full Description</label>
+              <textarea id="description" rows="7" placeholder="Write the detailed story of the project, what it solves, or what makes it meaningful."></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-heading">
+              <p class="header-kicker">Destinations</p>
+              <h3>Optional Links</h3>
+            </div>
+            <p class="section-support">Add only the links that make sense for this category. Visual work does not need a repository or live site.</p>
+
+            <div class="form-grid form-grid-two">
+              <div class="field-group">
+                <label for="github_url" id="githubLabel">Repository URL</label>
+                <input id="github_url" type="url" placeholder="GitHub URL" />
+              </div>
+
+              <div class="field-group">
+                <label for="live_url" id="liveLabel">Live URL</label>
+                <input id="live_url" type="url" placeholder="Live URL" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section" id="technologySection">
+            <div class="form-section-heading">
+              <p class="header-kicker">Stack</p>
+              <h3>Technologies</h3>
+            </div>
+            <p class="section-support">Choose every framework, language, or tool that belongs to this build. This section is most useful for web and app work.</p>
+            <div id="techList" class="tech-picker">Loading technologies...</div>
+          </div>
+
+          <div class="form-actions">
+            <p id="formMessage" class="form-message"></p>
+            <button type="submit" id="submitProject" class="primary-btn">Create Project</button>
+          </div>
         </form>
-
-        <p id="formMessage" class="panel-copy"></p>
       </section>
     </div>
   </div>

@@ -73,21 +73,38 @@ class ProjectService {
             short_description,
             github_url,
             live_url,
-            is_featured
+            is_featured,
+            category,
+            thumbnail_url,
+            project_year,
+            client_name,
+            medium,
+            status
         } = data;
 
         const [result] = await pool.query(`
             INSERT INTO projects 
-            (title, slug, description, short_description, github_url, live_url, is_featured)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (
+                title, slug, description, short_description,
+                github_url, live_url, is_featured,
+                category, thumbnail_url, project_year,
+                client_name, medium, status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             title,
             slug,
             description,
             short_description,
-            github_url,
-            live_url,
-            is_featured || false
+            github_url || null,
+            live_url || null,
+            is_featured || false,
+            category || 'web',
+            thumbnail_url || null,
+            project_year || null,
+            client_name || null,
+            medium || null,
+            status || 'published'
         ]);
 
         return result.insertId;

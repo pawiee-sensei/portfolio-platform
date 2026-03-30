@@ -3,7 +3,9 @@ const path = require('path');
 const projectRoutes = require('./routes/project.routes');
 const technologyRoutes = require('./routes/technology.routes');
 const errorMiddleware = require('./middlewares/error.middleware');
-const authRoutes = require('./routes/auth.routes'); 
+const authRoutes = require('./routes/auth.routes');
+const authMiddleware = require('./middlewares/auth.middleware');
+const upload = require('./config/multer');
 
 const app = express();
 
@@ -16,6 +18,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/projects', projectRoutes);
 app.use('/api/technologies', technologyRoutes);
 app.use('/api/auth', authRoutes);
+app.post('/api/upload', authMiddleware, upload.single('image'), (req, res) => {
+    res.json({
+        imageUrl: `/uploads/${req.file.filename}`
+    });
+});
 
 // Health check
 app.get('/', (req, res) => {
