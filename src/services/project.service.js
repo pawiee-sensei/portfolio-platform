@@ -1,5 +1,15 @@
 const pool = require('../config/db');
 
+function mapProjectWriteError(error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+        const mappedError = new Error('A portfolio entry with this slug already exists.');
+        mappedError.status = 409;
+        throw mappedError;
+    }
+
+    throw error;
+}
+
 class ProjectService {
 
     static async addProjectImage(projectId, imageUrl) {
@@ -82,32 +92,36 @@ class ProjectService {
             status
         } = data;
 
-        const [result] = await pool.query(`
-            INSERT INTO projects 
-            (
-                title, slug, description, short_description,
-                github_url, live_url, is_featured,
-                category, thumbnail_url, project_year,
-                client_name, medium, status
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-            title,
-            slug,
-            description,
-            short_description,
-            github_url || null,
-            live_url || null,
-            is_featured || false,
-            category || 'web',
-            thumbnail_url || null,
-            project_year || null,
-            client_name || null,
-            medium || null,
-            status || 'published'
-        ]);
+        try {
+            const [result] = await pool.query(`
+                INSERT INTO projects 
+                (
+                    title, slug, description, short_description,
+                    github_url, live_url, is_featured,
+                    category, thumbnail_url, project_year,
+                    client_name, medium, status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                title,
+                slug,
+                description,
+                short_description,
+                github_url || null,
+                live_url || null,
+                is_featured || false,
+                category || 'web',
+                thumbnail_url || null,
+                project_year || null,
+                client_name || null,
+                medium || null,
+                status || 'published'
+            ]);
 
-        return result.insertId;
+            return result.insertId;
+        } catch (error) {
+            mapProjectWriteError(error);
+        }
     }
 
     static async updateProject(id, data) {
@@ -121,10 +135,14 @@ class ProjectService {
 
         values.push(id);
 
-        await pool.query(
-            `UPDATE projects SET ${fields.join(', ')} WHERE id = ?`,
-            values
-        );
+        try {
+            await pool.query(
+                `UPDATE projects SET ${fields.join(', ')} WHERE id = ?`,
+                values
+            );
+        } catch (error) {
+            mapProjectWriteError(error);
+        }
     }
 
     static async deleteProject(id) {

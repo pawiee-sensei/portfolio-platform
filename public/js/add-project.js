@@ -1,9 +1,5 @@
-const token = localStorage.getItem('token');
 const LOGIN_PATH = '/login.html';
 const DASHBOARD_PATH = '/dashboard.html';
-const API_HEADERS = {
-  Authorization: `Bearer ${token}`
-};
 const MESSAGES = {
   titleRequired: 'Title is required.',
   slugInvalid: 'Please enter a clearer title using letters or numbers.',
@@ -39,6 +35,7 @@ const shortDescriptionInput = document.getElementById('short_description');
 const descriptionInput = document.getElementById('description');
 const featuredInput = document.getElementById('is_featured');
 const logoutButton = document.getElementById('logout');
+let isTechLoading = false;
 
 const categoryContent = {
   web: {
@@ -123,7 +120,7 @@ const categoryContent = {
   }
 };
 
-if (!token) {
+if (!localStorage.getItem('token')) {
   window.location.href = LOGIN_PATH;
 }
 
@@ -151,12 +148,37 @@ function slugify(value) {
 }
 
 function setSubmitting(isSubmitting) {
-  submitButton.disabled = isSubmitting;
+  const elements = form.querySelectorAll('input, textarea, select, button');
+
+  elements.forEach((element) => {
+    element.disabled = isSubmitting;
+  });
+
   submitButton.textContent = isSubmitting ? 'Creating...' : 'Create Portfolio Entry';
+}
+
+function updateSubmitAvailability() {
+  if (isTechLoading) {
+    submitButton.disabled = true;
+    submitButton.textContent = 'Loading...';
+    return;
+  }
+
+  submitButton.disabled = false;
+  submitButton.textContent = 'Create Portfolio Entry';
 }
 
 function setFormMessage(message) {
   formMessage.textContent = message;
+}
+
+function getAuthHeaders(extraHeaders = {}) {
+  const currentToken = localStorage.getItem('token');
+
+  return {
+    ...extraHeaders,
+    Authorization: `Bearer ${currentToken}`
+  };
 }
 
 function getTrimmedValue(input) {
@@ -179,21 +201,21 @@ function updateCategoryUI() {
   technologySection.classList.toggle('is-hidden', !config.showTech);
 }
 
-function buildProjectData({ title, slug, year, thumbnailUrl }) {
+function buildProjectData(formValues) {
   return {
-    title,
-    slug,
-    category: categoryInput.value,
-    project_year: year,
-    client_name: getTrimmedValue(clientInput),
-    medium: getTrimmedValue(mediumInput),
-    status: statusInput.value,
-    short_description: getTrimmedValue(shortDescriptionInput),
-    description: getTrimmedValue(descriptionInput),
-    github_url: getTrimmedValue(githubInput),
-    live_url: getTrimmedValue(liveInput),
-    is_featured: featuredInput.checked,
-    thumbnail_url: thumbnailUrl
+    title: formValues.title,
+    slug: formValues.slug,
+    category: formValues.category,
+    project_year: formValues.year,
+    client_name: formValues.clientName,
+    medium: formValues.medium,
+    status: formValues.status,
+    short_description: formValues.shortDescription,
+    description: formValues.description,
+    github_url: formValues.githubUrl,
+    live_url: formValues.liveUrl,
+    is_featured: formValues.isFeatured,
+    thumbnail_url: formValues.thumbnailUrl
   };
 }
 
@@ -236,7 +258,7 @@ async function uploadImage(file, url) {
 
   const data = await fetchJson(url, {
     method: 'POST',
-    headers: API_HEADERS,
+    headers: getAuthHeaders(),
     body: formData
   });
 
@@ -244,14 +266,15 @@ async function uploadImage(file, url) {
 }
 
 async function createProject(projectData) {
-  return fetchJson('/api/projects', {
+  const data = await fetchJson('/api/projects', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...API_HEADERS
-    },
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
     body: JSON.stringify(projectData)
   });
+
+  return data;
 }
 
 async function assignTechnologies(projectId, techIds) {
@@ -261,10 +284,9 @@ async function assignTechnologies(projectId, techIds) {
 
   await fetchJson(`/api/projects/${projectId}/technologies`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...API_HEADERS
-    },
+    headers: getAuthHeaders({
+      'Content-Type': 'application/json'
+    }),
     body: JSON.stringify({ techIds })
   });
 }
@@ -276,6 +298,9 @@ async function uploadGalleryImages(projectId, files) {
 }
 
 async function loadTechnologies() {
+  isTechLoading = true;
+  updateSubmitAvailability();
+
   try {
     const data = await fetchJson('/api/technologies');
 
@@ -292,13 +317,15 @@ async function loadTechnologies() {
     `).join('');
   } catch (error) {
     techList.textContent = MESSAGES.technologiesLoadFailed;
+  } finally {
+    isTechLoading = false;
+    updateSubmitAvailability();
   }
 }
 
-async function resetFormState() {
+function resetFormState() {
   form.reset();
   updateCategoryUI();
-  await loadTechnologies();
 }
 
 categoryInput.addEventListener('change', updateCategoryUI);
@@ -306,14 +333,34 @@ categoryInput.addEventListener('change', updateCategoryUI);
 form.onsubmit = async (e) => {
   e.preventDefault();
 
-  const title = getTrimmedValue(titleInput);
-  const slug = slugify(title);
-  const year = getTrimmedValue(yearInput);
-  const thumbnailFile = thumbnailInput.files[0];
-  const galleryFiles = Array.from(galleryInput.files);
-  const selectedTechs = getSelectedTechIds();
+  if (isTechLoading) {
+    setFormMessage('Please wait until technologies finish loading.');
+    return;
+  }
 
-  const validationError = validateForm({ title, slug, year });
+  const formValues = {
+    title: getTrimmedValue(titleInput),
+    slug: slugify(getTrimmedValue(titleInput)),
+    year: getTrimmedValue(yearInput),
+    category: categoryInput.value,
+    clientName: getTrimmedValue(clientInput),
+    medium: getTrimmedValue(mediumInput),
+    status: statusInput.value,
+    shortDescription: getTrimmedValue(shortDescriptionInput),
+    description: getTrimmedValue(descriptionInput),
+    githubUrl: getTrimmedValue(githubInput),
+    liveUrl: getTrimmedValue(liveInput),
+    isFeatured: featuredInput.checked,
+    thumbnailFile: thumbnailInput.files[0],
+    galleryFiles: Array.from(galleryInput.files),
+    selectedTechs: getSelectedTechIds()
+  };
+
+  const validationError = validateForm({
+    title: formValues.title,
+    slug: formValues.slug,
+    year: formValues.year
+  });
 
   if (validationError) {
     setFormMessage(validationError);
@@ -322,30 +369,25 @@ form.onsubmit = async (e) => {
 
   setSubmitting(true);
   setFormMessage(
-    thumbnailFile || galleryFiles.length
+    formValues.thumbnailFile || formValues.galleryFiles.length
       ? MESSAGES.creatingWithMedia
       : MESSAGES.creating
   );
 
   try {
-    const thumbnailUrl = thumbnailFile
-      ? await uploadImage(thumbnailFile, '/api/upload')
+    formValues.thumbnailUrl = formValues.thumbnailFile
+      ? await uploadImage(formValues.thumbnailFile, '/api/upload')
       : null;
 
-    const projectData = buildProjectData({
-      title,
-      slug,
-      year,
-      thumbnailUrl
-    });
+    const projectData = buildProjectData(formValues);
 
     const project = await createProject(projectData);
 
-    await assignTechnologies(project.id, selectedTechs);
-    await uploadGalleryImages(project.id, galleryFiles);
+    await assignTechnologies(project.id, formValues.selectedTechs);
+    await uploadGalleryImages(project.id, formValues.galleryFiles);
 
     setFormMessage(MESSAGES.createSuccess);
-    await resetFormState();
+    resetFormState();
     window.location.href = DASHBOARD_PATH;
   } catch (error) {
     setFormMessage(error.message || MESSAGES.serverError);
@@ -354,9 +396,11 @@ form.onsubmit = async (e) => {
   }
 };
 
-function initPage() {
+async function initPage() {
   updateCategoryUI();
-  loadTechnologies();
+  await loadTechnologies();
 }
 
-initPage();
+initPage().catch(() => {
+  setFormMessage('Unable to initialize the page.');
+});
