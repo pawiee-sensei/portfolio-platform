@@ -19,7 +19,15 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/technologies', technologyRoutes);
 app.use('/api/auth', authRoutes);
 app.post('/api/upload', authMiddleware, upload.single('image'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({
+            success: false,
+            message: 'No image uploaded'
+        });
+    }
+
     res.json({
+        success: true,
         imageUrl: `/uploads/${req.file.filename}`
     });
 });

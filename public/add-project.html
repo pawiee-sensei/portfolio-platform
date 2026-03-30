@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Add Project</title>
+  <title>Add Portfolio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
       <nav>
         <ul class="nav-list">
           <li class="nav-item" data-href="/dashboard.html">Projects</li>
-          <li class="nav-item active">Add Project</li>
+          <li class="nav-item active">Add Portfolio</li>
           <li class="nav-item" data-href="/dashboard.html#contacts">Contacts</li>
         </ul>
       </nav>
@@ -30,7 +30,7 @@
       <header class="header">
         <div>
           <p class="header-kicker">Control Center</p>
-          <span class="header-title">Add Project</span>
+          <span class="header-title">Add Portfolio</span>
         </div>
         <button id="logout" class="ghost-btn">Logout</button>
       </header>
@@ -60,7 +60,7 @@
             <div class="form-grid form-grid-two">
               <div class="field-group">
                 <label for="title">Title</label>
-                <input id="title" placeholder="Editorial Poster Series" required />
+                <input id="title" placeholder="Portfolio entry title" required />
               </div>
 
               <div class="field-group">
@@ -77,7 +77,7 @@
                   <option value="app">App</option>
                   <option value="graphic-design">Graphic Design</option>
                   <option value="poster">Poster</option>
-                  <option value="pubmat">Pubmat</option>
+                  <option value="pubmat">PubMats</option>
                   <option value="art">Art</option>
                   <option value="poetry">Poetry</option>
                   <option value="photography">Photography</option>
@@ -172,12 +172,12 @@
             <div class="form-grid form-grid-two">
               <div class="field-group">
                 <label for="github_url" id="githubLabel">Repository URL</label>
-                <input id="github_url" type="url" placeholder="GitHub URL" />
+                <input id="github_url" type="url" placeholder="Repository or reference URL" />
               </div>
 
               <div class="field-group">
                 <label for="live_url" id="liveLabel">Live URL</label>
-                <input id="live_url" type="url" placeholder="Live URL" />
+                <input id="live_url" type="url" placeholder="Live, publication, or project URL" />
               </div>
             </div>
           </div>
@@ -193,7 +193,7 @@
 
           <div class="form-actions">
             <p id="formMessage" class="form-message"></p>
-            <button type="submit" id="submitProject" class="primary-btn">Create Project</button>
+            <button type="submit" id="submitProject" class="primary-btn">Create Portfolio Entry</button>
           </div>
         </form>
       </section>

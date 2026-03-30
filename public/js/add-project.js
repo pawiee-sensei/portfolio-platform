@@ -1,4 +1,22 @@
 const token = localStorage.getItem('token');
+const LOGIN_PATH = '/login.html';
+const DASHBOARD_PATH = '/dashboard.html';
+const API_HEADERS = {
+  Authorization: `Bearer ${token}`
+};
+const MESSAGES = {
+  titleRequired: 'Title is required.',
+  slugInvalid: 'Please enter a clearer title using letters or numbers.',
+  yearInvalid: 'Project year must be a 4-digit year.',
+  creating: 'Creating portfolio entry...',
+  creatingWithMedia: 'Uploading media and creating portfolio entry...',
+  createSuccess: 'Portfolio entry created successfully',
+  createFailed: 'Failed to create portfolio entry',
+  technologiesLoadFailed: 'Unable to load technologies right now.',
+  noTechnologies: 'No technologies available yet.',
+  requestFailed: 'Request failed',
+  serverError: 'Server error'
+};
 const techList = document.getElementById('techList');
 const form = document.getElementById('projectForm');
 const formMessage = document.getElementById('formMessage');
@@ -9,77 +27,109 @@ const technologySection = document.getElementById('technologySection');
 const githubLabel = document.getElementById('githubLabel');
 const liveLabel = document.getElementById('liveLabel');
 const submitButton = document.getElementById('submitProject');
+const githubInput = document.getElementById('github_url');
+const liveInput = document.getElementById('live_url');
+const thumbnailInput = document.getElementById('thumbnail');
+const galleryInput = document.getElementById('gallery_images');
+const yearInput = document.getElementById('project_year');
+const clientInput = document.getElementById('client_name');
+const mediumInput = document.getElementById('medium');
+const statusInput = document.getElementById('status');
+const shortDescriptionInput = document.getElementById('short_description');
+const descriptionInput = document.getElementById('description');
+const featuredInput = document.getElementById('is_featured');
+const logoutButton = document.getElementById('logout');
 
 const categoryContent = {
   web: {
     help: 'Web projects usually benefit from technologies, repository links, and a live URL.',
     showTech: true,
     githubLabel: 'Repository URL',
-    liveLabel: 'Live URL'
+    liveLabel: 'Live URL',
+    githubPlaceholder: 'GitHub or repository URL',
+    livePlaceholder: 'Live URL'
   },
   app: {
     help: 'App projects can include technologies, repository links, store links, or a landing page.',
     showTech: true,
     githubLabel: 'Repository URL',
-    liveLabel: 'App or Demo URL'
+    liveLabel: 'App or Demo URL',
+    githubPlaceholder: 'Repository URL',
+    livePlaceholder: 'App, demo, or store URL'
   },
   'graphic-design': {
     help: 'Graphic design work is usually strongest with a thumbnail, gallery images, and a concise concept summary.',
     showTech: false,
     githubLabel: 'Process or Drive URL',
-    liveLabel: 'Project URL'
+    liveLabel: 'Project URL',
+    githubPlaceholder: 'Process, brief, or drive URL',
+    livePlaceholder: 'Project URL'
   },
   poster: {
     help: 'Poster entries work well with a strong cover image, project year, and a short explanation of the concept.',
     showTech: false,
     githubLabel: 'Reference URL',
-    liveLabel: 'Project URL'
+    liveLabel: 'Project URL',
+    githubPlaceholder: 'Reference URL',
+    livePlaceholder: 'Project URL'
   },
   pubmat: {
-    help: 'Pubmat entries usually focus on visual assets, campaign context, and client or organization details.',
+    help: 'PubMat entries usually focus on visual assets, campaign context, and client or organization details.',
     showTech: false,
     githubLabel: 'Reference URL',
-    liveLabel: 'Project URL'
+    liveLabel: 'Project URL',
+    githubPlaceholder: 'Reference URL',
+    livePlaceholder: 'Project URL'
   },
   art: {
     help: 'Art entries can stay media-first with medium, year, and an artist statement or brief description.',
     showTech: false,
     githubLabel: 'Reference URL',
-    liveLabel: 'Project URL'
+    liveLabel: 'Project URL',
+    githubPlaceholder: 'Reference URL',
+    livePlaceholder: 'Project URL'
   },
   poetry: {
     help: 'Poetry entries usually focus on title, year, context, and the full written piece or description.',
     showTech: false,
     githubLabel: 'Reading URL',
-    liveLabel: 'Publication URL'
+    liveLabel: 'Publication URL',
+    githubPlaceholder: 'Reading URL',
+    livePlaceholder: 'Publication URL'
   },
   photography: {
     help: 'Photography entries work best with strong thumbnails, gallery images, and brief shoot context.',
     showTech: false,
     githubLabel: 'Reference URL',
-    liveLabel: 'Gallery URL'
+    liveLabel: 'Gallery URL',
+    githubPlaceholder: 'Reference URL',
+    livePlaceholder: 'Gallery URL'
   },
   branding: {
     help: 'Branding projects benefit from client context, year, medium, and supporting gallery images.',
     showTech: false,
     githubLabel: 'Case Study URL',
-    liveLabel: 'Brand or Campaign URL'
+    liveLabel: 'Brand or Campaign URL',
+    githubPlaceholder: 'Case study URL',
+    livePlaceholder: 'Brand or campaign URL'
   },
   other: {
     help: 'Use the fields that fit this work best and leave the rest empty.',
     showTech: false,
     githubLabel: 'Reference URL',
-    liveLabel: 'Project URL'
+    liveLabel: 'Project URL',
+    githubPlaceholder: 'Reference URL',
+    livePlaceholder: 'Project URL'
   }
 };
 
 if (!token) {
-  window.location.href = '/login.html';
+  window.location.href = LOGIN_PATH;
 }
 
-document.getElementById('logout').onclick = () => {
+logoutButton.onclick = () => {
   localStorage.removeItem('token');
-  window.location.href = '/login.html';
+  window.location.href = LOGIN_PATH;
 };
 
 document.querySelectorAll('.sidebar li').forEach((item) => {
@@ -102,7 +152,20 @@ function slugify(value) {
 
 function setSubmitting(isSubmitting) {
   submitButton.disabled = isSubmitting;
-  submitButton.textContent = isSubmitting ? 'Creating...' : 'Create Project';
+  submitButton.textContent = isSubmitting ? 'Creating...' : 'Create Portfolio Entry';
+}
+
+function setFormMessage(message) {
+  formMessage.textContent = message;
+}
+
+function getTrimmedValue(input) {
+  return input.value.trim();
+}
+
+function getSelectedTechIds() {
+  return Array.from(techList.querySelectorAll('input:checked'))
+    .map((input) => Number(input.value));
 }
 
 function updateCategoryUI() {
@@ -111,20 +174,113 @@ function updateCategoryUI() {
   categoryHelp.textContent = config.help;
   githubLabel.textContent = config.githubLabel;
   liveLabel.textContent = config.liveLabel;
+  githubInput.placeholder = config.githubPlaceholder;
+  liveInput.placeholder = config.livePlaceholder;
   technologySection.classList.toggle('is-hidden', !config.showTech);
+}
+
+function buildProjectData({ title, slug, year, thumbnailUrl }) {
+  return {
+    title,
+    slug,
+    category: categoryInput.value,
+    project_year: year,
+    client_name: getTrimmedValue(clientInput),
+    medium: getTrimmedValue(mediumInput),
+    status: statusInput.value,
+    short_description: getTrimmedValue(shortDescriptionInput),
+    description: getTrimmedValue(descriptionInput),
+    github_url: getTrimmedValue(githubInput),
+    live_url: getTrimmedValue(liveInput),
+    is_featured: featuredInput.checked,
+    thumbnail_url: thumbnailUrl
+  };
+}
+
+function validateForm({ title, slug, year }) {
+  if (!title) {
+    return MESSAGES.titleRequired;
+  }
+
+  if (!slug) {
+    return MESSAGES.slugInvalid;
+  }
+
+  if (year && !/^\d{4}$/.test(year)) {
+    return MESSAGES.yearInvalid;
+  }
+
+  return null;
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json')
+    ? await response.json()
+    : { message: await response.text() };
+
+  if (!response.ok || data.success === false) {
+    const error = new Error(data.message || MESSAGES.requestFailed);
+    error.response = response;
+    error.data = data;
+    throw error;
+  }
+
+  return data;
+}
+
+async function uploadImage(file, url) {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const data = await fetchJson(url, {
+    method: 'POST',
+    headers: API_HEADERS,
+    body: formData
+  });
+
+  return data.imageUrl;
+}
+
+async function createProject(projectData) {
+  return fetchJson('/api/projects', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...API_HEADERS
+    },
+    body: JSON.stringify(projectData)
+  });
+}
+
+async function assignTechnologies(projectId, techIds) {
+  if (technologySection.classList.contains('is-hidden') || techIds.length === 0) {
+    return;
+  }
+
+  await fetchJson(`/api/projects/${projectId}/technologies`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...API_HEADERS
+    },
+    body: JSON.stringify({ techIds })
+  });
+}
+
+async function uploadGalleryImages(projectId, files) {
+  for (const file of files) {
+    await uploadImage(file, `/api/projects/${projectId}/images`);
+  }
 }
 
 async function loadTechnologies() {
   try {
-    const res = await fetch('/api/technologies');
-    const data = await res.json();
-
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || 'Failed to load technologies');
-    }
+    const data = await fetchJson('/api/technologies');
 
     if (!data.data.length) {
-      techList.textContent = 'No technologies available yet.';
+      techList.textContent = MESSAGES.noTechnologies;
       return;
     }
 
@@ -135,8 +291,14 @@ async function loadTechnologies() {
       </label>
     `).join('');
   } catch (error) {
-    techList.textContent = 'Unable to load technologies right now.';
+    techList.textContent = MESSAGES.technologiesLoadFailed;
   }
+}
+
+async function resetFormState() {
+  form.reset();
+  updateCategoryUI();
+  await loadTechnologies();
 }
 
 categoryInput.addEventListener('change', updateCategoryUI);
@@ -144,131 +306,57 @@ categoryInput.addEventListener('change', updateCategoryUI);
 form.onsubmit = async (e) => {
   e.preventDefault();
 
-  const selectedTechs = Array.from(
-    techList.querySelectorAll('input:checked')
-  ).map((input) => Number(input.value));
-  const thumbnailFile = document.getElementById('thumbnail').files[0];
-  const galleryFiles = Array.from(document.getElementById('gallery_images').files);
-  const year = document.getElementById('project_year').value.trim();
+  const title = getTrimmedValue(titleInput);
+  const slug = slugify(title);
+  const year = getTrimmedValue(yearInput);
+  const thumbnailFile = thumbnailInput.files[0];
+  const galleryFiles = Array.from(galleryInput.files);
+  const selectedTechs = getSelectedTechIds();
 
-  let thumbnail_url = null;
+  const validationError = validateForm({ title, slug, year });
 
-  if (year && !/^\d{4}$/.test(year)) {
-    formMessage.textContent = 'Project year must be a 4-digit year.';
+  if (validationError) {
+    setFormMessage(validationError);
     return;
   }
 
   setSubmitting(true);
-  formMessage.textContent = 'Uploading media and creating project...';
+  setFormMessage(
+    thumbnailFile || galleryFiles.length
+      ? MESSAGES.creatingWithMedia
+      : MESSAGES.creating
+  );
 
   try {
-    if (thumbnailFile) {
-      const thumbnailData = new FormData();
-      thumbnailData.append('image', thumbnailFile);
+    const thumbnailUrl = thumbnailFile
+      ? await uploadImage(thumbnailFile, '/api/upload')
+      : null;
 
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + token
-        },
-        body: thumbnailData
-      });
-
-      const uploadData = await uploadRes.json();
-
-      if (!uploadRes.ok) {
-        formMessage.textContent = uploadData.message || 'Thumbnail upload failed';
-        setSubmitting(false);
-        return;
-      }
-
-      thumbnail_url = uploadData.imageUrl;
-    }
-
-    const projectData = {
-      title: titleInput.value.trim(),
-      slug: slugify(titleInput.value),
-      category: categoryInput.value,
-      project_year: year,
-      client_name: document.getElementById('client_name').value.trim(),
-      medium: document.getElementById('medium').value.trim(),
-      status: document.getElementById('status').value,
-      short_description: document.getElementById('short_description').value.trim(),
-      description: document.getElementById('description').value.trim(),
-      github_url: document.getElementById('github_url').value.trim(),
-      live_url: document.getElementById('live_url').value.trim(),
-      is_featured: document.getElementById('is_featured').checked,
-      thumbnail_url
-    };
-
-    const res = await fetch('/api/projects', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + token
-      },
-      body: JSON.stringify(projectData)
+    const projectData = buildProjectData({
+      title,
+      slug,
+      year,
+      thumbnailUrl
     });
 
-    const data = await res.json();
+    const project = await createProject(projectData);
 
-    if (!res.ok || !data.success) {
-      formMessage.textContent = data.message || 'Failed to create project';
-      setSubmitting(false);
-      return;
-    }
+    await assignTechnologies(project.id, selectedTechs);
+    await uploadGalleryImages(project.id, galleryFiles);
 
-    if (!technologySection.classList.contains('is-hidden') && selectedTechs.length > 0) {
-      const techRes = await fetch(`/api/projects/${data.id}/technologies`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + token
-        },
-        body: JSON.stringify({ techIds: selectedTechs })
-      });
-
-      const techData = await techRes.json();
-
-      if (!techRes.ok || !techData.success) {
-        formMessage.textContent = techData.message || 'Project created, but technologies were not saved';
-        setSubmitting(false);
-        return;
-      }
-    }
-
-    for (const file of galleryFiles) {
-      const galleryData = new FormData();
-      galleryData.append('image', file);
-
-      const imageRes = await fetch(`/api/projects/${data.id}/images`, {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + token
-        },
-        body: galleryData
-      });
-
-      const imageData = await imageRes.json();
-
-      if (!imageRes.ok || !imageData.success) {
-        formMessage.textContent = imageData.message || 'Project created, but some gallery images failed to upload';
-        setSubmitting(false);
-        return;
-      }
-    }
-
-    formMessage.textContent = 'Project created successfully';
-    form.reset();
-    updateCategoryUI();
-    await loadTechnologies();
-    window.location.href = '/dashboard.html';
+    setFormMessage(MESSAGES.createSuccess);
+    await resetFormState();
+    window.location.href = DASHBOARD_PATH;
   } catch (error) {
-    formMessage.textContent = 'Server error';
+    setFormMessage(error.message || MESSAGES.serverError);
   } finally {
     setSubmitting(false);
   }
 };
 
-updateCategoryUI();
-loadTechnologies();
+function initPage() {
+  updateCategoryUI();
+  loadTechnologies();
+}
+
+initPage();
