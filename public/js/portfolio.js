@@ -4,7 +4,9 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     selectedProject: null,
     activeMenuId: null,
     linkDrafts: [],
-    activeLinkIndex: 0
+    activeLinkIndex: 0,
+    activeGalleryImage: '',
+    openRequestToken: 0
   };
 
   const categories = [
@@ -242,8 +244,10 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     });
   }
 
-  async function openProject(id) {
+  async function openProject(id, options = {}) {
     const detailRegion = document.getElementById('portfolioDetailRegion');
+    const draftSnapshot = options.draftSnapshot || null;
+    const requestToken = ++state.openRequestToken;
 
     state.activeMenuId = null;
     syncMenuState();
@@ -266,20 +270,19 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      state.selectedProject = response.data;
-      state.linkDrafts = (response.data.links || []).map((link) => ({
-        label: link.label || '',
-        url: link.url || ''
-      }));
-
-      if (!state.linkDrafts.length) {
-        state.linkDrafts = [{ label: '', url: '' }];
+      if (requestToken !== state.openRequestToken) {
+        return;
       }
 
-      state.activeLinkIndex = 0;
+      state.selectedProject = response.data;
+      applyProjectDraftState(response.data, draftSnapshot);
       renderProjectDetail();
       detailRegion.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (error) {
+      if (requestToken !== state.openRequestToken) {
+        return;
+      }
+
       detailRegion.innerHTML = `
         <section class="portfolio-detail-card">
           <div class="panel-head">
@@ -351,6 +354,11 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     const galleryImages = [project.thumbnail_url ? { id: 'thumbnail', image_url: project.thumbnail_url, isThumbnail: true } : null]
       .concat((project.images || []).map((image) => ({ ...image, isThumbnail: false })))
       .filter(Boolean);
+    const initialGalleryImage = galleryImages.find((image) => image.image_url === state.activeGalleryImage)?.image_url
+      || galleryImages[0]?.image_url
+      || '';
+
+    state.activeGalleryImage = initialGalleryImage;
 
     detailRegion.innerHTML = `
       <section class="portfolio-detail-card">
@@ -367,7 +375,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
           <div class="portfolio-gallery-panel">
             <div class="portfolio-gallery-main ${galleryImages.length ? '' : 'is-empty'}" id="portfolioGalleryMain">
               ${galleryImages.length
-                ? `<img src="${escapeHtml(galleryImages[0].image_url)}" alt="${escapeHtml(project.title)} preview" class="portfolio-gallery-hero" />`
+                ? `<img src="${escapeHtml(initialGalleryImage)}" alt="${escapeHtml(project.title)} preview" class="portfolio-gallery-hero" />`
                 : '<div class="portfolio-gallery-empty">No images uploaded yet</div>'}
             </div>
             <div class="portfolio-gallery-strip">
@@ -531,7 +539,11 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     const galleryMain = document.getElementById('portfolioGalleryMain');
 
     closeButton?.addEventListener('click', () => {
+      state.openRequestToken += 1;
       state.selectedProject = null;
+      state.linkDrafts = [];
+      state.activeLinkIndex = 0;
+      state.activeGalleryImage = '';
       document.getElementById('portfolioDetailRegion').innerHTML = '';
     });
 
@@ -541,6 +553,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
           return;
         }
 
+        state.activeGalleryImage = button.dataset.galleryImage || '';
         galleryMain.classList.remove('is-empty');
         galleryMain.innerHTML = `
           <img src="${escapeHtml(button.dataset.galleryImage)}" alt="Selected gallery preview" class="portfolio-gallery-hero" />
@@ -566,30 +579,44 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
 
     document.querySelectorAll('[data-remove-image]').forEach((button) => {
       button.addEventListener('click', async () => {
-        await removeImage(projectId, button.dataset.removeImage);
+        await withAsyncButtonLock(button, async () => {
+          await removeImage(projectId, button.dataset.removeImage);
+        });
       });
     });
 
     document.querySelectorAll('[data-remove-file]').forEach((button) => {
       button.addEventListener('click', async () => {
-        await removeFile(projectId, Number(button.dataset.removeFile));
+        await withAsyncButtonLock(button, async () => {
+          await removeFile(projectId, Number(button.dataset.removeFile));
+        });
       });
     });
 
     savePortfolioMetaButton?.addEventListener('click', async () => {
-      await savePortfolioDetails(projectId);
+      await withAsyncButtonLock(savePortfolioMetaButton, async () => {
+        await savePortfolioMeta(projectId);
+      });
     });
     savePortfolioDetailsButton?.addEventListener('click', async () => {
-      await savePortfolioDetails(projectId);
+      await withAsyncButtonLock(savePortfolioDetailsButton, async () => {
+        await savePortfolioDescriptions(projectId);
+      });
     });
     saveThumbnailButton?.addEventListener('click', async () => {
-      await saveThumbnail(projectId);
+      await withAsyncButtonLock(saveThumbnailButton, async () => {
+        await saveThumbnail(projectId);
+      });
     });
     saveGalleryImagesButton?.addEventListener('click', async () => {
-      await saveGalleryImages(projectId);
+      await withAsyncButtonLock(saveGalleryImagesButton, async () => {
+        await saveGalleryImages(projectId);
+      });
     });
     uploadFileButton?.addEventListener('click', async () => {
-      await uploadFile(projectId);
+      await withAsyncButtonLock(uploadFileButton, async () => {
+        await uploadFile(projectId);
+      });
     });
 
     const galleryTrack = document.getElementById('portfolioGalleryTrack');
@@ -707,9 +734,33 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     });
 
     document.getElementById('saveLinksButton')?.addEventListener('click', async () => {
-      syncActiveLinkDraft();
-      await saveLinks(projectId);
+      const saveLinksButton = document.getElementById('saveLinksButton');
+
+      await withAsyncButtonLock(saveLinksButton, async () => {
+        syncActiveLinkDraft();
+        await saveLinks(projectId);
+      });
     });
+  }
+
+  async function withAsyncButtonLock(button, action) {
+    if (!button || button.disabled) {
+      return;
+    }
+
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.classList.add('is-loading');
+
+    try {
+      await action();
+    } finally {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.classList.remove('is-loading');
+      button.textContent = originalLabel;
+    }
   }
 
   function updateActiveLinkDraft(patch) {
@@ -748,8 +799,103 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     });
   }
 
-  async function savePortfolioDetails(projectId) {
-    const payload = {
+  function getDetailDraftSnapshot() {
+    syncActiveLinkDraft();
+
+    const titleInput = document.getElementById('editTitle');
+    const yearInput = document.getElementById('editYear');
+    const categoryInput = document.getElementById('editCategory');
+    const statusInput = document.getElementById('editStatus');
+    const clientInput = document.getElementById('editClient');
+    const mediumInput = document.getElementById('editMedium');
+    const githubInput = document.getElementById('editGithub');
+    const liveInput = document.getElementById('editLive');
+    const shortDescriptionInput = document.getElementById('editShortDescription');
+    const descriptionInput = document.getElementById('editDescription');
+    const featuredInput = document.getElementById('editFeatured');
+
+    if (!titleInput) {
+      return null;
+    }
+
+    return {
+      title: titleInput.value.trim(),
+      project_year: yearInput?.value.trim() || '',
+      category: categoryInput?.value || '',
+      status: statusInput?.value || '',
+      client_name: clientInput?.value.trim() || '',
+      medium: mediumInput?.value.trim() || '',
+      github_url: githubInput?.value.trim() || '',
+      live_url: liveInput?.value.trim() || '',
+      short_description: shortDescriptionInput?.value.trim() || '',
+      description: descriptionInput?.value.trim() || '',
+      is_featured: Boolean(featuredInput?.checked),
+      linkDrafts: state.linkDrafts.map((link) => ({
+        label: String(link.label || ''),
+        url: String(link.url || '')
+      })),
+      activeLinkIndex: state.activeLinkIndex,
+      activeGalleryImage: state.activeGalleryImage
+    };
+  }
+
+  function applyProjectDraftState(project, draftSnapshot) {
+    if (!draftSnapshot) {
+      state.linkDrafts = (project.links || []).map((link) => ({
+        label: link.label || '',
+        url: link.url || ''
+      }));
+
+      if (!state.linkDrafts.length) {
+        state.linkDrafts = [{ label: '', url: '' }];
+      }
+
+      state.activeLinkIndex = 0;
+      state.activeGalleryImage = project.thumbnail_url || project.images?.[0]?.image_url || '';
+      return;
+    }
+
+    state.selectedProject = {
+      ...project,
+      title: draftSnapshot.title,
+      project_year: draftSnapshot.project_year,
+      category: draftSnapshot.category,
+      status: draftSnapshot.status,
+      client_name: draftSnapshot.client_name,
+      medium: draftSnapshot.medium,
+      github_url: draftSnapshot.github_url,
+      live_url: draftSnapshot.live_url,
+      short_description: draftSnapshot.short_description,
+      description: draftSnapshot.description,
+      is_featured: Number(draftSnapshot.is_featured)
+    };
+
+    state.linkDrafts = draftSnapshot.linkDrafts?.length
+      ? draftSnapshot.linkDrafts.map((link) => ({
+          label: String(link.label || ''),
+          url: String(link.url || '')
+        }))
+      : [{ label: '', url: '' }];
+
+    state.activeLinkIndex = Math.min(
+      draftSnapshot.activeLinkIndex || 0,
+      Math.max(0, state.linkDrafts.length - 1)
+    );
+    state.activeGalleryImage = draftSnapshot.activeGalleryImage || project.thumbnail_url || project.images?.[0]?.image_url || '';
+  }
+
+  async function reopenProjectPreservingDrafts(projectId, { refreshGrid = false } = {}) {
+    const draftSnapshot = getDetailDraftSnapshot();
+
+    if (refreshGrid) {
+      await refreshProjects();
+    }
+
+    await openProject(projectId, { draftSnapshot });
+  }
+
+  function getMetaPayload() {
+    return {
       title: document.getElementById('editTitle').value.trim(),
       slug: slugify(document.getElementById('editTitle').value),
       project_year: document.getElementById('editYear').value.trim(),
@@ -759,10 +905,19 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
       medium: document.getElementById('editMedium').value.trim(),
       github_url: document.getElementById('editGithub').value.trim(),
       live_url: document.getElementById('editLive').value.trim(),
-      short_description: document.getElementById('editShortDescription').value.trim(),
-      description: document.getElementById('editDescription').value.trim(),
       is_featured: document.getElementById('editFeatured').checked
     };
+  }
+
+  function getDescriptionPayload() {
+    return {
+      short_description: document.getElementById('editShortDescription').value.trim(),
+      description: document.getElementById('editDescription').value.trim()
+    };
+  }
+
+  async function savePortfolioMeta(projectId) {
+    const payload = getMetaPayload();
 
     try {
       await fetchJson(`/api/projects/${projectId}`, {
@@ -773,10 +928,27 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         body: JSON.stringify(payload)
       });
 
-      await refreshProjects();
-      await openProject(projectId);
+      await reopenProjectPreservingDrafts(projectId, { refreshGrid: true });
     } catch (error) {
       alert(error.message || 'Failed to save portfolio details.');
+    }
+  }
+
+  async function savePortfolioDescriptions(projectId) {
+    const payload = getDescriptionPayload();
+
+    try {
+      await fetchJson(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders({
+          'Content-Type': 'application/json'
+        }),
+        body: JSON.stringify(payload)
+      });
+
+      await reopenProjectPreservingDrafts(projectId, { refreshGrid: true });
+    } catch (error) {
+      alert(error.message || 'Failed to save descriptions.');
     }
   }
 
@@ -799,7 +971,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         body: JSON.stringify({ links: getLinksPayload() })
       });
 
-      await openProject(projectId);
+      await reopenProjectPreservingDrafts(projectId);
     } catch (error) {
       alert(error.message || 'Failed to save links.');
     }
@@ -832,8 +1004,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         body: JSON.stringify({ thumbnail_url: upload.imageUrl })
       });
 
-      await refreshProjects();
-      await openProject(projectId);
+      await reopenProjectPreservingDrafts(projectId, { refreshGrid: true });
     } catch (error) {
       alert(error.message || 'Failed to upload thumbnail.');
     }
@@ -860,8 +1031,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         });
       }
 
-      await refreshProjects();
-      await openProject(projectId);
+      await reopenProjectPreservingDrafts(projectId, { refreshGrid: true });
     } catch (error) {
       alert(error.message || 'Failed to upload gallery images.');
     }
@@ -884,8 +1054,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         });
       }
 
-      await refreshProjects();
-      await openProject(projectId);
+      await reopenProjectPreservingDrafts(projectId, { refreshGrid: true });
     } catch (error) {
       alert(error.message || 'Failed to remove image.');
     }
@@ -923,7 +1092,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         body: formData
       });
 
-      await openProject(projectId);
+      await reopenProjectPreservingDrafts(projectId);
     } catch (error) {
       alert(error.message || 'Upload failed.');
     }
@@ -936,7 +1105,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         headers: getAuthHeaders()
       });
 
-      await openProject(projectId);
+      await reopenProjectPreservingDrafts(projectId);
     } catch (error) {
       alert(error.message || 'Failed to remove file.');
     }

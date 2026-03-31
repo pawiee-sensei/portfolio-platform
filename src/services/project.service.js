@@ -27,21 +27,31 @@ class ProjectService {
     }
 
     static async replaceProjectLinks(projectId, links) {
-        await pool.query(
-            `DELETE FROM project_links WHERE project_id = ?`,
-            [projectId]
-        );
+        const connection = await pool.getConnection();
 
-        if (!links.length) {
-            return;
+        try {
+            await connection.beginTransaction();
+            await connection.query(
+                `DELETE FROM project_links WHERE project_id = ?`,
+                [projectId]
+            );
+
+            if (links.length) {
+                const values = links.map((link) => [projectId, link.label, link.url]);
+
+                await connection.query(
+                    `INSERT INTO project_links (project_id, label, url) VALUES ?`,
+                    [values]
+                );
+            }
+
+            await connection.commit();
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
         }
-
-        const values = links.map((link) => [projectId, link.label, link.url]);
-
-        await pool.query(
-            `INSERT INTO project_links (project_id, label, url) VALUES ?`,
-            [values]
-        );
     }
 
     static async getProjectLinks(projectId) {
@@ -107,9 +117,27 @@ class ProjectService {
 
     static async getAllProjects() {
         const [rows] = await pool.query(`
-            SELECT * FROM projects ORDER BY created_at DESC
+            SELECT
+                p.*,
+                (
+                    SELECT JSON_ARRAY(
+                        JSON_OBJECT(
+                            'image_url', pi.image_url
+                        )
+                    )
+                    FROM project_images pi
+                    WHERE pi.project_id = p.id
+                    ORDER BY pi.created_at ASC
+                    LIMIT 1
+                ) AS preview_images
+            FROM projects p
+            ORDER BY p.created_at DESC
         `);
-        return rows;
+
+        return rows.map(({ preview_images, ...row }) => ({
+            ...row,
+            images: preview_images ? JSON.parse(preview_images) : []
+        }));
     }
 
     static async getProjectById(id) {

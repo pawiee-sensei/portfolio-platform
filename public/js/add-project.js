@@ -416,6 +416,13 @@ async function createProject(projectData) {
   return data;
 }
 
+async function deleteProject(projectId) {
+  await fetchJson(`/api/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+}
+
 async function assignTechnologies(projectId, techIds) {
   if (technologySection.classList.contains('is-hidden') || techIds.length === 0) {
     return;
@@ -595,6 +602,8 @@ form.onsubmit = async (e) => {
       : MESSAGES.creating
   );
 
+  let createdProjectId = null;
+
   try {
     formValues.thumbnailUrl = formValues.thumbnailFile
       ? await uploadImage(formValues.thumbnailFile, '/api/upload')
@@ -603,14 +612,24 @@ form.onsubmit = async (e) => {
     const projectData = buildProjectData(formValues);
 
     const project = await createProject(projectData);
+    createdProjectId = project.id;
 
-    await assignTechnologies(project.id, formValues.selectedTechs);
-    await uploadGalleryImages(project.id, formValues.galleryFiles);
+    await assignTechnologies(createdProjectId, formValues.selectedTechs);
+    await uploadGalleryImages(createdProjectId, formValues.galleryFiles);
 
     setFormMessage(MESSAGES.createSuccess);
     resetFormState();
     window.location.href = DASHBOARD_PATH;
   } catch (error) {
+    if (typeof createdProjectId === 'number') {
+      try {
+        await deleteProject(createdProjectId);
+      } catch (rollbackError) {
+        setFormMessage(`${error.message || MESSAGES.serverError}. Cleanup failed, so you may need to remove the partial entry manually.`);
+        return;
+      }
+    }
+
     setFormMessage(error.message || MESSAGES.serverError);
   } finally {
     setSubmitting(false);

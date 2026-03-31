@@ -9,22 +9,24 @@ class AuthService {
             throw error;
         }
 
-        const [existingUsers] = await pool.query(
-            `SELECT id FROM users WHERE email = ?`,
-            [email]
-        );
+        const passwordHash = await bcrypt.hash(password, 10);
 
-        if (existingUsers.length > 0) {
-            const error = new Error('Email already exists');
-            error.status = 409;
+        let result;
+
+        try {
+            [result] = await pool.query(
+                `INSERT INTO users (email, password_hash) VALUES (?, ?)`,
+                [email, passwordHash]
+            );
+        } catch (error) {
+            if (error.code === 'ER_DUP_ENTRY') {
+                const mappedError = new Error('Email already exists');
+                mappedError.status = 409;
+                throw mappedError;
+            }
+
             throw error;
         }
-
-        const passwordHash = await bcrypt.hash(password, 10);
-        const [result] = await pool.query(
-            `INSERT INTO users (email, password_hash) VALUES (?, ?)`,
-            [email, passwordHash]
-        );
 
         return {
             id: result.insertId,

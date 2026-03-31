@@ -15,6 +15,31 @@ const clearMessages = () => {
   }
 };
 
+const setFormPending = (form, isPending, pendingLabel) => {
+  if (!form) {
+    return;
+  }
+
+  const controls = form.querySelectorAll('input, button');
+  controls.forEach((control) => {
+    control.disabled = isPending;
+  });
+
+  const submitButton = form.querySelector('button[type="submit"]');
+
+  if (!submitButton) {
+    return;
+  }
+
+  if (!submitButton.dataset.defaultLabel) {
+    submitButton.dataset.defaultLabel = submitButton.textContent;
+  }
+
+  submitButton.textContent = isPending
+    ? pendingLabel
+    : submitButton.dataset.defaultLabel;
+};
+
 const setActivePanel = (targetId) => {
   tabs.forEach((tab) => {
     const isActive = tab.dataset.target === targetId;
@@ -37,6 +62,7 @@ if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearMessages();
+    setFormPending(loginForm, true, 'Signing in...');
 
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -62,6 +88,8 @@ if (loginForm) {
       window.location.href = '/dashboard.html';
     } catch (err) {
       errorEl.innerText = 'Server error';
+    } finally {
+      setFormPending(loginForm, false, 'Signing in...');
     }
   });
 }
@@ -70,6 +98,7 @@ if (signupForm) {
   signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearMessages();
+    setFormPending(signupForm, true, 'Creating account...');
 
     const email = document.getElementById('signupEmail').value;
     const password = document.getElementById('signupPassword').value;
@@ -95,6 +124,8 @@ if (signupForm) {
       window.location.href = '/dashboard.html';
     } catch (err) {
       errorEl.innerText = 'Server error';
+    } finally {
+      setFormPending(signupForm, false, 'Creating account...');
     }
   });
 }
