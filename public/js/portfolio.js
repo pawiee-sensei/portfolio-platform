@@ -2,7 +2,9 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
   const state = {
     projects: [],
     selectedProject: null,
-    activeMenuId: null
+    activeMenuId: null,
+    linkDrafts: [],
+    activeLinkIndex: 0
   };
 
   const categories = [
@@ -265,6 +267,16 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
       });
 
       state.selectedProject = response.data;
+      state.linkDrafts = (response.data.links || []).map((link) => ({
+        label: link.label || '',
+        url: link.url || ''
+      }));
+
+      if (!state.linkDrafts.length) {
+        state.linkDrafts = [{ label: '', url: '' }];
+      }
+
+      state.activeLinkIndex = 0;
       renderProjectDetail();
       detailRegion.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (error) {
@@ -280,18 +292,52 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     }
   }
 
-  function buildLinksEditor(links) {
-    const rows = (links || []).length
-      ? links
-      : [{ label: '', url: '' }];
+  function renderLinksManager() {
+    const links = state.linkDrafts.length ? state.linkDrafts : [{ label: '', url: '' }];
+    const safeIndex = Math.min(state.activeLinkIndex, links.length - 1);
+    const activeLink = links[safeIndex] || { label: '', url: '' };
 
-    return rows.map((link, index) => `
-      <div class="portfolio-link-editor-row" data-link-row="${index}">
-        <input type="text" value="${escapeHtml(link.label || '')}" placeholder="Link label" data-link-label="${index}" />
-        <input type="url" value="${escapeHtml(link.url || '')}" placeholder="https://example.com" data-link-url="${index}" />
-        <button type="button" class="ghost-btn portfolio-remove-inline-btn" data-remove-link-row="${index}">Remove</button>
+    state.activeLinkIndex = safeIndex;
+
+    return `
+      <div class="portfolio-links-switcher">
+        ${links.map((link, index) => `
+          <button
+            type="button"
+            class="portfolio-link-tab ${index === safeIndex ? 'is-active' : ''}"
+            data-link-tab="${index}"
+          >${escapeHtml(link.label || `Link ${index + 1}`)}</button>
+        `).join('')}
       </div>
-    `).join('');
+      <div class="portfolio-link-single-editor">
+        <div class="portfolio-link-focus-head">
+          <div>
+            <strong>${escapeHtml(activeLink.label || `Link ${safeIndex + 1}`)}</strong>
+            <p class="portfolio-section-copy">Edit one link at a time so this section stays compact.</p>
+          </div>
+          <button
+            type="button"
+            class="ghost-btn portfolio-remove-inline-btn"
+            id="removeActiveLinkButton"
+            ${links.length === 1 && !activeLink.label && !activeLink.url ? 'disabled' : ''}
+          >Delete Link</button>
+        </div>
+        <div class="portfolio-link-single-grid">
+          <div class="portfolio-field-group">
+            <label class="portfolio-field-label" for="activeLinkLabel">Platform or label</label>
+            <input id="activeLinkLabel" type="text" value="${escapeHtml(activeLink.label || '')}" placeholder="Instagram" />
+          </div>
+          <div class="portfolio-field-group">
+            <label class="portfolio-field-label" for="activeLinkUrl">Link URL</label>
+            <input id="activeLinkUrl" type="url" value="${escapeHtml(activeLink.url || '')}" placeholder="https://example.com" />
+          </div>
+        </div>
+      </div>
+      <div class="portfolio-inline-actions portfolio-inline-actions-links">
+        <button type="button" class="ghost-btn" id="addLinkRowButton">Add Link Row</button>
+        <button type="button" class="primary-btn" id="saveLinksButton">Save Links</button>
+      </div>
+    `;
   }
 
   function renderProjectDetail() {
@@ -337,7 +383,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
                         <button
                           type="button"
                           class="portfolio-thumb-remove"
-                          aria-label="Remove image"
+                          aria-label="Delete image"
                           data-remove-image="${image.isThumbnail ? 'thumbnail' : image.id}"
                         >x</button>
                       </div>
@@ -350,15 +396,22 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
 
             <div class="portfolio-inline-card">
               <h3>Media Updates</h3>
-              <div class="portfolio-inline-form">
-                <label class="portfolio-field-label" for="thumbnailUpload">Replace Thumbnail</label>
-                <input type="file" id="thumbnailUpload" accept="image/*" />
-                <button type="button" class="primary-btn" id="saveThumbnailButton">Upload Thumbnail</button>
+              <p class="portfolio-section-copy">Keep your cover image and supporting gallery fresh without leaving this editor.</p>
+              <div class="portfolio-upload-group">
+                <div class="portfolio-inline-form portfolio-upload-card">
+                  <label class="portfolio-field-label" for="thumbnailUpload">Replace Thumbnail</label>
+                  <input type="file" id="thumbnailUpload" class="portfolio-file-input" accept="image/*" />
+                  <p class="portfolio-input-note">Best for the main card and featured view.</p>
+                  <button type="button" class="primary-btn" id="saveThumbnailButton">Upload Thumbnail</button>
+                </div>
               </div>
-              <div class="portfolio-inline-form">
-                <label class="portfolio-field-label" for="galleryUpload">Add Gallery Images</label>
-                <input type="file" id="galleryUpload" accept="image/*" multiple />
-                <button type="button" class="primary-btn" id="saveGalleryImagesButton">Upload Images</button>
+              <div class="portfolio-upload-group">
+                <div class="portfolio-inline-form portfolio-upload-card">
+                  <label class="portfolio-field-label" for="galleryUpload">Add Gallery Images</label>
+                  <input type="file" id="galleryUpload" class="portfolio-file-input" accept="image/*" multiple />
+                  <p class="portfolio-input-note">Add process shots, alternate layouts, or extra visuals. Larger images are supported up to 15MB each.</p>
+                  <button type="button" class="primary-btn" id="saveGalleryImagesButton">Upload Images</button>
+                </div>
               </div>
             </div>
           </div>
@@ -415,6 +468,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
                   <input id="editFeatured" type="checkbox" ${Number(project.is_featured) === 1 ? 'checked' : ''} />
                 </label>
               </div>
+              <button type="button" class="primary-btn portfolio-save-details-btn" id="savePortfolioMetaButton">Save Portfolio Details</button>
             </div>
 
             <div class="portfolio-inline-card">
@@ -427,51 +481,50 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
                 <label class="portfolio-field-label" for="editDescription">Long Description</label>
                 <textarea id="editDescription" rows="8" placeholder="Tell the full story behind this work.">${escapeHtml(project.description || '')}</textarea>
               </div>
-              <button type="button" class="primary-btn" id="savePortfolioDetailsButton">Save Portfolio Details</button>
+              <button type="button" class="primary-btn portfolio-save-details-btn" id="savePortfolioDetailsButton">Save Descriptions</button>
             </div>
 
-            <div class="portfolio-inline-card">
-              <h3>Editable Links</h3>
-              <div id="portfolioLinksEditor" class="portfolio-links-editor">
-                ${buildLinksEditor(project.links || [])}
-              </div>
-              <div class="portfolio-inline-actions">
-                <button type="button" class="ghost-btn" id="addLinkRowButton">Add Another Link</button>
-                <button type="button" class="primary-btn" id="saveLinksButton">Save Links</button>
-              </div>
-            </div>
+          </div>
+        </div>
 
-            <div class="portfolio-inline-card">
-              <h3>Uploaded Files</h3>
-              ${(project.files || []).length
-                ? `<div class="portfolio-file-editor">
-                    ${project.files.map((file) => `
-                      <div class="portfolio-file-editor-row">
-                        <a href="${escapeHtml(file.file_url)}" target="_blank" rel="noreferrer">${escapeHtml(file.file_name)}</a>
-                        <button type="button" class="ghost-btn portfolio-remove-inline-btn" data-remove-file="${file.id}">Remove</button>
-                      </div>
-                    `).join('')}
-                  </div>`
-                : '<p class="portfolio-empty-copy">No supporting files uploaded yet.</p>'}
-              <div class="portfolio-inline-form">
-                <input type="file" id="fileInput" />
-                <button type="button" class="primary-btn" id="uploadFileButton">Upload File</button>
-              </div>
-              <p class="portfolio-empty-copy">Accepted: PNG, JPG, WEBP, or PDF up to 2MB.</p>
-            </div>
+        <div class="portfolio-inline-card portfolio-inline-card-wide">
+          <h3>Editable Links</h3>
+          <p class="portfolio-section-copy">Organize portfolio links cleanly so visitors can jump straight to the right platform.</p>
+          <div id="portfolioLinksSection">
+            ${renderLinksManager()}
+          </div>
+        </div>
+
+        <div class="portfolio-inline-card portfolio-inline-card-wide">
+          <h3>Uploaded Files</h3>
+          <p class="portfolio-section-copy">Attach supporting assets and keep downloadable files under control.</p>
+          ${(project.files || []).length
+            ? `<div class="portfolio-file-editor">
+                ${project.files.map((file) => `
+                  <div class="portfolio-file-editor-row">
+                    <a href="${escapeHtml(file.file_url)}" target="_blank" rel="noreferrer">${escapeHtml(file.file_name)}</a>
+                    <button type="button" class="ghost-btn portfolio-remove-inline-btn" data-remove-file="${file.id}">Delete</button>
+                  </div>
+                `).join('')}
+              </div>`
+            : '<p class="portfolio-empty-copy">No supporting files uploaded yet.</p>'}
+          <div class="portfolio-inline-form portfolio-upload-card">
+            <input type="file" id="fileInput" class="portfolio-file-input" />
+            <p class="portfolio-input-note">Accepted: JPG, JPEG, PNG, or WEBP up to 15MB.</p>
+            <button type="button" class="primary-btn" id="uploadFileButton">Upload File</button>
           </div>
         </div>
       </section>
     `;
 
     bindProjectDetailEvents(project.id);
+    hydrateHeroImageSizing();
   }
 
   function bindProjectDetailEvents(projectId) {
     const closeButton = document.getElementById('closePortfolioDetail');
+    const savePortfolioMetaButton = document.getElementById('savePortfolioMetaButton');
     const savePortfolioDetailsButton = document.getElementById('savePortfolioDetailsButton');
-    const addLinkRowButton = document.getElementById('addLinkRowButton');
-    const saveLinksButton = document.getElementById('saveLinksButton');
     const saveThumbnailButton = document.getElementById('saveThumbnailButton');
     const saveGalleryImagesButton = document.getElementById('saveGalleryImagesButton');
     const uploadFileButton = document.getElementById('uploadFileButton');
@@ -492,6 +545,7 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
         galleryMain.innerHTML = `
           <img src="${escapeHtml(button.dataset.galleryImage)}" alt="Selected gallery preview" class="portfolio-gallery-hero" />
         `;
+        hydrateHeroImageSizing();
       });
     });
 
@@ -522,18 +576,11 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
       });
     });
 
-    document.querySelectorAll('[data-remove-link-row]').forEach((button) => {
-      button.addEventListener('click', () => {
-        button.closest('.portfolio-link-editor-row')?.remove();
-      });
-    });
-
-    addLinkRowButton?.addEventListener('click', appendLinkRow);
-    savePortfolioDetailsButton?.addEventListener('click', async () => {
+    savePortfolioMetaButton?.addEventListener('click', async () => {
       await savePortfolioDetails(projectId);
     });
-    saveLinksButton?.addEventListener('click', async () => {
-      await saveLinks(projectId);
+    savePortfolioDetailsButton?.addEventListener('click', async () => {
+      await savePortfolioDetails(projectId);
     });
     saveThumbnailButton?.addEventListener('click', async () => {
       await saveThumbnail(projectId);
@@ -551,6 +598,41 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
       galleryTrack.addEventListener('scroll', updateGalleryScrollButtons);
       updateGalleryScrollButtons();
     }
+
+    bindLinksManagerEvents(projectId);
+  }
+
+  function hydrateHeroImageSizing() {
+    const image = document.querySelector('.portfolio-gallery-hero');
+
+    if (!image) {
+      return;
+    }
+
+    const applySizing = () => {
+      const ratio = image.naturalWidth / image.naturalHeight;
+
+      image.classList.remove('is-landscape', 'is-square', 'is-portrait');
+
+      if (ratio < 0.9) {
+        image.classList.add('is-portrait');
+        return;
+      }
+
+      if (ratio <= 1.12) {
+        image.classList.add('is-square');
+        return;
+      }
+
+      image.classList.add('is-landscape');
+    };
+
+    if (image.complete) {
+      applySizing();
+      return;
+    }
+
+    image.addEventListener('load', applySizing, { once: true });
   }
 
   function updateGalleryScrollButtons() {
@@ -571,26 +653,98 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
     nextButton.disabled = track.scrollLeft >= maxScrollLeft - 4;
   }
 
-  function appendLinkRow() {
-    const editor = document.getElementById('portfolioLinksEditor');
+  function renderLinksSection(projectId) {
+    const section = document.getElementById('portfolioLinksSection');
 
-    if (!editor) {
+    if (!section) {
       return;
     }
 
-    const index = editor.querySelectorAll('.portfolio-link-editor-row').length;
-    const wrapper = document.createElement('div');
-    wrapper.className = 'portfolio-link-editor-row';
-    wrapper.dataset.linkRow = String(index);
-    wrapper.innerHTML = `
-      <input type="text" placeholder="Link label" data-link-label="${index}" />
-      <input type="url" placeholder="https://example.com" data-link-url="${index}" />
-      <button type="button" class="ghost-btn portfolio-remove-inline-btn" data-remove-link-row="${index}">Remove</button>
-    `;
-    editor.appendChild(wrapper);
+    section.innerHTML = renderLinksManager();
+    bindLinksManagerEvents(projectId);
+  }
 
-    wrapper.querySelector('[data-remove-link-row]')?.addEventListener('click', () => {
-      wrapper.remove();
+  function bindLinksManagerEvents(projectId) {
+    document.querySelectorAll('[data-link-tab]').forEach((button) => {
+      button.addEventListener('click', () => {
+        syncActiveLinkDraft();
+        state.activeLinkIndex = Number(button.dataset.linkTab);
+        renderLinksSection(projectId);
+      });
+    });
+
+    document.getElementById('activeLinkLabel')?.addEventListener('input', (event) => {
+      updateActiveLinkDraft({ label: event.target.value });
+      syncLinkTabLabels();
+    });
+
+    document.getElementById('activeLinkUrl')?.addEventListener('input', (event) => {
+      updateActiveLinkDraft({ url: event.target.value });
+    });
+
+    document.getElementById('addLinkRowButton')?.addEventListener('click', () => {
+      syncActiveLinkDraft();
+      state.linkDrafts.push({ label: '', url: '' });
+      state.activeLinkIndex = state.linkDrafts.length - 1;
+      renderLinksSection(projectId);
+    });
+
+    document.getElementById('removeActiveLinkButton')?.addEventListener('click', () => {
+      if (!state.linkDrafts.length) {
+        return;
+      }
+
+      if (state.linkDrafts.length === 1) {
+        state.linkDrafts = [{ label: '', url: '' }];
+        state.activeLinkIndex = 0;
+        renderLinksSection(projectId);
+        return;
+      }
+
+      state.linkDrafts.splice(state.activeLinkIndex, 1);
+      state.activeLinkIndex = Math.max(0, state.activeLinkIndex - 1);
+      renderLinksSection(projectId);
+    });
+
+    document.getElementById('saveLinksButton')?.addEventListener('click', async () => {
+      syncActiveLinkDraft();
+      await saveLinks(projectId);
+    });
+  }
+
+  function updateActiveLinkDraft(patch) {
+    if (!state.linkDrafts.length) {
+      state.linkDrafts = [{ label: '', url: '' }];
+      state.activeLinkIndex = 0;
+    }
+
+    state.linkDrafts[state.activeLinkIndex] = {
+      ...state.linkDrafts[state.activeLinkIndex],
+      ...patch
+    };
+  }
+
+  function syncActiveLinkDraft() {
+    const labelInput = document.getElementById('activeLinkLabel');
+    const urlInput = document.getElementById('activeLinkUrl');
+
+    if (!labelInput || !urlInput) {
+      return;
+    }
+
+    updateActiveLinkDraft({
+      label: labelInput.value.trim(),
+      url: urlInput.value.trim()
+    });
+  }
+
+  function syncLinkTabLabels() {
+    const tabs = document.querySelectorAll('[data-link-tab]');
+
+    tabs.forEach((tab) => {
+      const index = Number(tab.dataset.linkTab);
+      const draft = state.linkDrafts[index] || {};
+      tab.textContent = draft.label || `Link ${index + 1}`;
     });
   }
 
@@ -627,10 +781,10 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
   }
 
   function getLinksPayload() {
-    return Array.from(document.querySelectorAll('.portfolio-link-editor-row'))
-      .map((row) => ({
-        label: row.querySelector('input[type="text"]').value.trim(),
-        url: row.querySelector('input[type="url"]').value.trim()
+    return state.linkDrafts
+      .map((link) => ({
+        label: String(link.label || '').trim(),
+        url: String(link.url || '').trim()
       }))
       .filter((link) => link.label || link.url);
   }
@@ -746,16 +900,16 @@ window.loadPortfolioPage = async function loadPortfolioPage(content, token) {
       return;
     }
 
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
-    const maxSize = 2 * 1024 * 1024;
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+    const maxSize = 15 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type.');
+      alert('Invalid file type. Please upload a JPG, JPEG, PNG, or WEBP image.');
       return;
     }
 
     if (file.size > maxSize) {
-      alert('File too large. Max size is 2MB.');
+      alert('File too large. Max size is 15MB.');
       return;
     }
 
